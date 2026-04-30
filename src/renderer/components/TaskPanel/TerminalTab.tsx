@@ -1,8 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { Terminal } from 'xterm'
-import { FitAddon } from '@xterm/addon-fit'
+import { useState, useEffect } from 'react'
 import type { Task } from '@shared/ipc-types'
-import { pty, onPtyOutput, onPtyExit } from '../../lib/api'
+import { pty } from '../../lib/api'
 import { useTaskStore } from '../../store/taskStore'
 
 interface Props {
@@ -10,87 +8,52 @@ interface Props {
   isActive: boolean
 }
 
-export function TerminalTab({ task, isActive }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const termRef = useRef<Terminal | null>(null)
-  const fitAddonRef = useRef<FitAddon | null>(null)
+export function TerminalTab({ task }: Props) {
+  const [port, setPort] = useState<number | null>(null)
+  const [error, setError] = useState('')
   const { updateTaskStatus } = useTaskStore()
 
   useEffect(() => {
-    if (isActive && fitAddonRef.current) {
-      const t = setTimeout(() => fitAddonRef.current?.fit(), 50)
-      return () => clearTimeout(t)
-    }
-  }, [isActive])
-
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    const term = new Terminal({
-      theme: {
-        background: '#141414',
-        foreground: '#e5e5e5',
-        cursor: '#7c6af7',
-        selectionBackground: '#7c6af740',
-        black: '#0d0d0d',
-        brightBlack: '#3e3e3e',
-      },
-      fontFamily: 'JetBrains Mono, Fira Code, Cascadia Code, monospace',
-      fontSize: 13,
-      lineHeight: 1.4,
-      cursorBlink: true,
-      allowProposedApi: true,
-    })
-
-    const fitAddon = new FitAddon()
-    term.loadAddon(fitAddon)
-    term.open(containerRef.current)
-    fitAddon.fit()
-
-    termRef.current = term
-    fitAddonRef.current = fitAddon
-
-    pty.spawn(task.id, task.worktreePath)
     updateTaskStatus(task.id, 'running')
 
-    let unlistenOutput: (() => void) | null = null
-    let unlistenExit: (() => void) | null = null
-
-    onPtyOutput((e) => {
-      if (e.taskId === task.id) term.write(e.data)
-    }).then((fn) => { unlistenOutput = fn })
-
-    onPtyExit((e) => {
-      if (e.taskId === task.id) {
+    pty.spawn(task.id, task.worktreePath)
+      .then((p) => setPort(p))
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e)
+        setError(msg)
         updateTaskStatus(task.id, 'idle')
-        term.write('\r\n\x1b[33m[session ended — press any key to restart]\x1b[0m\r\n')
-      }
-    }).then((fn) => { unlistenExit = fn })
-
-    term.onData((data) => {
-      pty.write(task.id, data)
-    })
-
-    const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit()
-      pty.resize(task.id, term.cols, term.rows)
-    })
-    resizeObserver.observe(containerRef.current)
+      })
 
     return () => {
-      unlistenOutput?.()
-      unlistenExit?.()
-      resizeObserver.disconnect()
       pty.kill(task.id)
-      term.dispose()
+      updateTaskStatus(task.id, 'idle')
     }
   }, [task.id])
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
+        <p className="text-error text-sm">{error}</p>
+        <code className="text-xs text-muted bg-surface-3 px-3 py-1 rounded">
+          sudo apt install ttyd
+        </code>
+      </div>
+    )
+  }
+
+  if (!port) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted text-xs">
+        Starting terminal…
+      </div>
+    )
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full p-1"
-      style={{ background: '#141414' }}
+    <iframe
+      src={`http://127.0.0.1:${port}`}
+      className="h-full w-full border-0"
+      title={`terminal-${task.id}`}
     />
   )
 }

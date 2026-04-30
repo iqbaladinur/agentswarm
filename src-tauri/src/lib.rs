@@ -47,13 +47,11 @@ fn create_task(
     name: String,
 ) -> Result<db::Task, String> {
     let id = Uuid::new_v4().to_string();
-    let main_branch = git::get_main_branch(&repo_path).map_err(|e| e.to_string())?;
     let slug = name.to_lowercase().replace(' ', "-");
     let branch = format!("task/{}-{}", slug, &id[..6]);
     let worktree_path = format!("{}/.worktrees/{}", repo_path, id);
 
     git::create_worktree(&repo_path, &branch, &worktree_path).map_err(|e| e.to_string())?;
-    let _ = main_branch;
 
     state
         .db
@@ -73,31 +71,26 @@ fn delete_task(state: State<'_, AppState>, task_id: String) -> Result<(), String
     state.db.delete_task(&task_id).map_err(|e| e.to_string())
 }
 
-// ── PTY ───────────────────────────────────────────────────────────────────────
+// ── PTY (ttyd) ────────────────────────────────────────────────────────────────
 
 #[tauri::command]
 fn pty_spawn(
     state: State<'_, AppState>,
-    app: AppHandle,
     task_id: String,
     worktree_path: String,
-) -> Result<(), String> {
-    state
+) -> Result<u16, String> {
+    // Lock briefly just to start the process and record the session
+    let port = state
         .pty
         .lock()
         .unwrap()
-        .spawn(task_id, worktree_path, app)
-        .map_err(|e| e.to_string())
-}
+        .start(task_id, worktree_path)
+        .map_err(|e| e.to_string())?;
 
-#[tauri::command]
-fn pty_write(state: State<'_, AppState>, task_id: String, data: String) {
-    state.pty.lock().unwrap().write(&task_id, data.as_bytes());
-}
+    // Wait for ttyd to be ready outside the lock so other commands can proceed
+    pty_mgr::wait_ready(port, 5000).map_err(|e| e.to_string())?;
 
-#[tauri::command]
-fn pty_resize(state: State<'_, AppState>, task_id: String, cols: u16, rows: u16) {
-    state.pty.lock().unwrap().resize(&task_id, cols, rows);
+    Ok(port)
 }
 
 #[tauri::command]
@@ -228,8 +221,6 @@ pub fn run() {
             create_task,
             delete_task,
             pty_spawn,
-            pty_write,
-            pty_resize,
             pty_kill,
             git_log,
             git_diff,

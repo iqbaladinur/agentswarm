@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core'
-import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { Task, Repo, Commit, FileStatus } from '@shared/ipc-types'
 
 // ── REST-equivalent commands ──────────────────────────────────────────────────
@@ -40,34 +39,11 @@ export const api = {
   },
 }
 
-// ── PTY commands ──────────────────────────────────────────────────────────────
+// ── PTY (ttyd) ───────────────────────────────────────────────────────────────
 
 export const pty = {
+  // Returns the localhost port where ttyd is listening
   spawn: (taskId: string, worktreePath: string) =>
-    invoke<void>('pty_spawn', { taskId, worktreePath }),
-  write: (taskId: string, data: string) =>
-    invoke<void>('pty_write', { taskId, data }),
-  resize: (taskId: string, cols: number, rows: number) =>
-    invoke<void>('pty_resize', { taskId, cols, rows }),
+    invoke<number>('pty_spawn', { taskId, worktreePath }),
   kill: (taskId: string) => invoke<void>('pty_kill', { taskId }),
-}
-
-// ── PTY event listeners ───────────────────────────────────────────────────────
-
-export interface PtyOutputEvent {
-  taskId: string
-  data: string
-}
-
-export interface PtyExitEvent {
-  taskId: string
-  exitCode: number
-}
-
-export function onPtyOutput(handler: (e: PtyOutputEvent) => void): Promise<UnlistenFn> {
-  return listen<PtyOutputEvent>('pty:output', (event) => handler(event.payload))
-}
-
-export function onPtyExit(handler: (e: PtyExitEvent) => void): Promise<UnlistenFn> {
-  return listen<PtyExitEvent>('pty:exit', (event) => handler(event.payload))
 }
