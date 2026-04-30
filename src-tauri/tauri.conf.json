@@ -1,0 +1,34 @@
+{
+  "productName": "AgentSwarm",
+  "version": "0.1.0",
+  "identifier": "com.agentswarm.app",
+  "build": {
+    "frontendDist": "../dist/client",
+    "devUrl": "http://localhost:47821",
+    "beforeDevCommand": "npm run client:dev",
+    "beforeBuildCommand": "npm run client:build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "AgentSwarm",
+        "width": 1280,
+        "height": 800,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  },
+  "plugins": {
+    "shell": {
+      "open": true
+    }
+  }
+}
