@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useTaskStore } from '../store/taskStore'
-import { api } from '../lib/api'
+import { FolderPicker } from './FolderPicker'
 
 export function WelcomeScreen() {
   const { openRepo } = useTaskStore()
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
 
   const handleOpen = async (path: string) => {
     if (!path.trim()) return
@@ -21,17 +22,15 @@ export function WelcomeScreen() {
     }
   }
 
-  const handleBrowse = async () => {
-    try {
-      const path = await api.fs.openFolderDialog()
-      if (path) handleOpen(path)
-    } catch (err: any) {
-      setError(err.message)
-    }
-  }
-
   return (
     <div className="flex h-full w-full items-center justify-center bg-surface-0">
+      {showPicker && (
+        <FolderPicker
+          onSelect={(p) => { setShowPicker(false); handleOpen(p) }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+
       <div className="text-center space-y-6 w-96">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">AgentSwarm</h1>
@@ -48,7 +47,7 @@ export function WelcomeScreen() {
               className="flex-1 bg-surface-3 text-white text-sm px-3 py-2 rounded border border-border focus:border-accent outline-none font-mono"
             />
             <button
-              onClick={handleBrowse}
+              onClick={() => setShowPicker(true)}
               title="Browse folders"
               className="px-3 py-2 bg-surface-3 hover:bg-surface-4 text-muted hover:text-white border border-border rounded transition-colors text-sm"
             >
@@ -61,7 +60,7 @@ export function WelcomeScreen() {
             disabled={loading || !input.trim()}
             className="w-full py-2 bg-accent hover:bg-accent-dim text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
           >
-            {loading ? 'Opening...' : 'Open Repository'}
+            {loading ? 'Opening…' : 'Open Repository'}
           </button>
         </div>
 

@@ -3,13 +3,14 @@ import { useTaskStore } from '../../store/taskStore'
 import { useUIStore } from '../../store/uiStore'
 import { TaskItem } from './TaskItem'
 import { NewTaskInput } from './NewTaskInput'
-import { api } from '../../lib/api'
+import { FolderPicker } from '../FolderPicker'
 
 export function Sidebar() {
   const { tasks, repoPath, repos, switchRepo, openRepo, removeRepo } = useTaskStore()
   const { panelTaskIds } = useUIStore()
   const [showNewInput, setShowNewInput] = useState(false)
   const [showRepoMenu, setShowRepoMenu] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const repoName = repoPath?.split('/').pop() ?? ''
@@ -24,11 +25,9 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleOpenDialog = async () => {
-    setShowRepoMenu(false)
+  const handlePickerSelect = async (path: string) => {
     try {
-      const path = await api.fs.openFolderDialog()
-      if (path) await openRepo(path)
+      await openRepo(path)
     } catch (err: any) {
       alert(err.message)
     }
@@ -36,6 +35,12 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col w-56 min-w-56 border-r border-border bg-surface-1 h-full">
+      {showPicker && (
+        <FolderPicker
+          onSelect={(p) => { setShowPicker(false); setShowRepoMenu(false); handlePickerSelect(p) }}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
 
       {/* Repo header with switcher */}
       <div className="relative border-b border-border" ref={menuRef}>
@@ -79,7 +84,7 @@ export function Sidebar() {
             })}
             <div className="border-t border-border">
               <button
-                onClick={handleOpenDialog}
+                onClick={() => setShowPicker(true)}
                 className="w-full px-3 py-2 text-left text-xs text-muted hover:text-white hover:bg-surface-3 transition-colors"
               >
                 + Open another repo
