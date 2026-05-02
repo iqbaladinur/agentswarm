@@ -4,6 +4,7 @@ import { WorkspaceArea } from './components/WorkspaceArea'
 import { useTaskStore } from './store/taskStore'
 import { useUIStore } from './store/uiStore'
 import { WelcomeScreen } from './components/WelcomeScreen'
+import { TitleBar } from './components/TitleBar'
 
 export default function App() {
   const { repoPath, initialized, init } = useTaskStore()
@@ -22,17 +23,20 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-surface-0">
-      {repoPath ? (
-        <>
-          <Sidebar />
-          <div className="flex-1 overflow-hidden">
-            {panelTaskIds.length === 0 ? <EmptyState /> : <WorkspaceArea />}
-          </div>
-        </>
-      ) : (
-        <WelcomeScreen />
-      )}
+    <div className="flex flex-col h-full w-full overflow-hidden bg-surface-0">
+      <TitleBar />
+      <div className="flex flex-1 overflow-hidden">
+        {repoPath ? (
+          <>
+            <Sidebar />
+            <div className="flex-1 overflow-hidden">
+              {panelTaskIds.length === 0 ? <EmptyState /> : <WorkspaceArea />}
+            </div>
+          </>
+        ) : (
+          <WelcomeScreen />
+        )}
+      </div>
     </div>
   )
 }
@@ -40,7 +44,7 @@ export default function App() {
 function EmptyState() {
   return (
     <div className="flex h-full items-center justify-center text-muted">
-      <p className="text-sm">Click a task to open it, or create a new one</p>
+      <p className="text-base">Click a task to open it, or create a new one</p>
     </div>
   )
 }

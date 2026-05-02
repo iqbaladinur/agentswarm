@@ -22,8 +22,8 @@ export function TaskPanel({ task }: Props) {
   return (
     <div className="flex flex-col h-full bg-surface-1 border-r border-border last:border-r-0">
       {/* Header */}
-      <div className="flex items-center border-b border-border px-3 py-1.5 gap-2 flex-shrink-0">
-        <span className="text-xs text-accent font-mono truncate flex-1">{task.branch}</span>
+      <div className="flex items-center border-b border-border px-3 py-2 gap-2 flex-shrink-0">
+        <span className="text-sm text-accent font-mono truncate flex-1">{task.branch}</span>
 
         <button
           onClick={() => api.shell.openVscode(task.worktreePath)}
@@ -48,7 +48,7 @@ export function TaskPanel({ task }: Props) {
             <button
               key={tab.id}
               onClick={() => setTab(task.id, tab.id)}
-              className={`px-4 py-1.5 text-xs transition-colors border-b-2 ${
+              className={`px-4 py-2 text-sm transition-colors border-b-2 ${
                 currentTab === tab.id
                   ? 'border-accent text-white'
                   : 'border-transparent text-muted hover:text-white'
@@ -58,7 +58,7 @@ export function TaskPanel({ task }: Props) {
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted px-3 py-1.5 truncate max-w-32">{task.name}</span>
+        <span className="text-sm text-muted px-3 py-2 truncate max-w-32">{task.name}</span>
       </div>
 
       {/* Tab content — all always mounted, hidden via CSS so terminal PTY stays alive */}

@@ -6,7 +6,7 @@ import { NewTaskInput } from './NewTaskInput'
 import { FolderPicker } from '../FolderPicker'
 
 export function Sidebar() {
-  const { tasks, repoPath, repos, switchRepo, openRepo, removeRepo } = useTaskStore()
+  const { tasks, repoPath, repos, switchRepo, openRepo, closeRepo, removeRepo } = useTaskStore()
   const { panelTaskIds } = useUIStore()
   const [showNewInput, setShowNewInput] = useState(false)
   const [showRepoMenu, setShowRepoMenu] = useState(false)
@@ -63,7 +63,7 @@ export function Sidebar() {
                 <div key={repo.path} className="flex items-center group">
                   <button
                     onClick={() => { switchRepo(repo.path); setShowRepoMenu(false) }}
-                    className={`flex-1 px-3 py-2 text-left text-xs truncate transition-colors ${
+                    className={`flex-1 px-3 py-2.5 text-left text-sm truncate transition-colors ${
                       isActive ? 'text-accent' : 'text-muted hover:text-white hover:bg-surface-3'
                     }`}
                     title={repo.path}
@@ -71,21 +71,25 @@ export function Sidebar() {
                     {isActive && <span className="mr-1">✓</span>}
                     {repo.name}
                   </button>
-                  {!isActive && (
-                    <button
+                  <button
                       onClick={() => removeRepo(repo.path)}
-                      className="opacity-0 group-hover:opacity-100 px-2 py-2 text-muted hover:text-error text-xs transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 px-2 py-2 text-muted hover:text-error text-sm transition-opacity"
                     >
                       ×
                     </button>
-                  )}
                 </div>
               )
             })}
             <div className="border-t border-border">
               <button
+                onClick={() => { closeRepo(); setShowRepoMenu(false) }}
+                className="w-full px-3 py-2.5 text-left text-sm text-muted hover:text-error hover:bg-surface-3 transition-colors"
+              >
+                × Close folder
+              </button>
+              <button
                 onClick={() => setShowPicker(true)}
-                className="w-full px-3 py-2 text-left text-xs text-muted hover:text-white hover:bg-surface-3 transition-colors"
+                className="w-full px-3 py-2.5 text-left text-sm text-muted hover:text-white hover:bg-surface-3 transition-colors"
               >
                 + Open another repo
               </button>
@@ -112,7 +116,7 @@ export function Sidebar() {
       <div className="p-2 border-t border-border">
         <button
           onClick={() => setShowNewInput(true)}
-          className="w-full py-1.5 text-xs text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
+          className="w-full py-2 text-sm text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
         >
           + New Task
         </button>

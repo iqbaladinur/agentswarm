@@ -49,10 +49,10 @@ export function FilesTab({ task }: Props) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-        <span className="text-xs text-muted">{files.length} changed files</span>
+        <span className="text-sm text-muted">{files.length} changed files</span>
         <button
           onClick={loadFiles}
-          className="text-xs text-muted hover:text-white transition-colors"
+          className="text-sm text-muted hover:text-white transition-colors"
         >
           Refresh
         </button>
@@ -60,7 +60,7 @@ export function FilesTab({ task }: Props) {
 
       <div className="flex-1 overflow-y-auto">
         {files.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted text-xs">
+          <div className="flex items-center justify-center h-full text-muted text-sm">
             No changes
           </div>
         ) : (
@@ -73,10 +73,10 @@ export function FilesTab({ task }: Props) {
                 onClick={() => handleOpenVscode(file.path)}
                 title="Open in VS Code"
               >
-                <span className={`text-xs font-mono font-bold w-4 flex-shrink-0 ${style.class}`}>
+                <span className={`text-sm font-mono font-bold w-5 flex-shrink-0 ${style.class}`}>
                   {style.label}
                 </span>
-                <span className="text-xs text-white font-mono truncate flex-1">{file.path}</span>
+                <span className="text-sm text-white font-mono truncate flex-1">{file.path}</span>
                 <span className="text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity">
                   open
                 </span>

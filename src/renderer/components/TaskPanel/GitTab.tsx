@@ -50,7 +50,7 @@ export function GitTab({ task }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full text-muted text-xs">
+      <div className="flex items-center justify-center h-full text-muted text-sm">
         Loading...
       </div>
     )
@@ -62,7 +62,7 @@ export function GitTab({ task }: Props) {
       <div className="w-64 min-w-64 border-r border-border overflow-y-auto flex flex-col">
         <div className="flex-1">
           {commits.length === 0 ? (
-            <p className="text-muted text-xs p-4">No commits yet</p>
+            <p className="text-muted text-sm p-4">No commits yet</p>
           ) : (
             commits.map((commit) => (
               <div
@@ -72,7 +72,7 @@ export function GitTab({ task }: Props) {
                   selectedCommit === commit.hash ? 'bg-surface-3' : ''
                 }`}
               >
-                <p className="text-xs text-white truncate">{commit.message}</p>
+                <p className="text-sm text-white truncate">{commit.message}</p>
                 <p className="text-xs text-muted mt-0.5 font-mono">{commit.hash.slice(0, 7)}</p>
                 <p className="text-xs text-muted">{new Date(commit.date).toLocaleString()}</p>
               </div>
@@ -84,14 +84,14 @@ export function GitTab({ task }: Props) {
         <div className="p-2 border-t border-border flex-shrink-0">
           <button
             onClick={loadCommits}
-            className="w-full py-1 text-xs text-muted hover:text-white hover:bg-surface-3 rounded mb-1 transition-colors"
+            className="w-full py-1.5 text-sm text-muted hover:text-white hover:bg-surface-3 rounded mb-1 transition-colors"
           >
             Refresh
           </button>
           <button
             onClick={handleMerge}
             disabled={merging || commits.length === 0}
-            className="w-full py-1.5 text-xs bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
+            className="w-full py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
           >
             {merging ? 'Merging...' : 'Merge to main'}
           </button>
@@ -101,7 +101,7 @@ export function GitTab({ task }: Props) {
       {/* Diff view */}
       <div className="flex-1 overflow-y-auto">
         {diff ? (
-          <pre className="text-xs font-mono p-4 whitespace-pre-wrap leading-relaxed">
+          <pre className="text-sm font-mono p-4 whitespace-pre-wrap leading-relaxed">
             {diff.split('\n').map((line, i) => (
               <span
                 key={i}
@@ -120,7 +120,7 @@ export function GitTab({ task }: Props) {
             ))}
           </pre>
         ) : (
-          <div className="flex items-center justify-center h-full text-muted text-xs">
+          <div className="flex items-center justify-center h-full text-muted text-sm">
             Select a commit to view diff
           </div>
         )}

@@ -46,7 +46,7 @@ export function FolderPicker({ onSelect, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-          <span className="text-sm text-white font-medium">Select Repository</span>
+          <span className="text-base text-white font-medium">Select Repository</span>
           <button onClick={onClose} className="text-muted hover:text-white text-lg leading-none">×</button>
         </div>
 
@@ -76,8 +76,12 @@ export function FolderPicker({ onSelect, onClose }: Props) {
               className="flex items-center gap-2 px-4 py-2 hover:bg-surface-3 cursor-pointer border-b border-border group transition-colors"
               onDoubleClick={() => navigate(dir.path)}
             >
-              <span className="text-accent text-xs">📁</span>
-              <span className="flex-1 text-xs text-white font-mono truncate">{dir.name}</span>
+              <span className="text-accent text-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M3.75 3A1.75 1.75 0 0 0 2 4.75v10.5c0 .966.784 1.75 1.75 1.75h12.5A1.75 1.75 0 0 0 18 15.25v-8.5A1.75 1.75 0 0 0 16.25 5h-4.836a.25.25 0 0 1-.177-.073L9.823 3.513A1.75 1.75 0 0 0 8.586 3H3.75Z" />
+                </svg>
+              </span>
+              <span className="flex-1 text-sm text-white font-mono truncate">{dir.name}</span>
               <button
                 onClick={() => navigate(dir.path)}
                 className="text-xs text-muted opacity-0 group-hover:opacity-100 hover:text-white transition-opacity"
@@ -93,7 +97,7 @@ export function FolderPicker({ onSelect, onClose }: Props) {
           <button
             onClick={() => data && onSelect(data.current)}
             disabled={!data}
-            className="px-4 py-1.5 bg-accent hover:bg-accent-dim text-white text-xs rounded transition-colors disabled:opacity-50"
+            className="px-5 py-2 bg-accent hover:bg-accent-dim text-white text-sm rounded transition-colors disabled:opacity-50"
           >
             Select This Folder
           </button>

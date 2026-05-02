@@ -40,7 +40,7 @@ export function NewTaskInput({ onDone }: Props) {
         }}
         onBlur={submit}
         placeholder="Task name..."
-        className="w-full bg-surface-3 text-white text-xs px-2 py-1.5 rounded border border-border focus:border-accent outline-none"
+        className="w-full bg-surface-3 text-white text-sm px-2 py-1.5 rounded border border-border focus:border-accent outline-none"
       />
     </div>
   )

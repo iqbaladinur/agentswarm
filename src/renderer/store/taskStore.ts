@@ -11,6 +11,7 @@ interface TaskStore {
   init: () => Promise<void>
   openRepo: (path: string) => Promise<void>
   switchRepo: (path: string) => Promise<void>
+  closeRepo: () => void
   removeRepo: (path: string) => Promise<void>
   loadTasks: () => Promise<void>
   createTask: (name: string) => Promise<Task>
@@ -44,6 +45,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     await api.repo.touch(path)
     const [repos, tasks] = await Promise.all([api.repo.list(), api.task.list(path)])
     set({ repos, repoPath: path, tasks })
+  },
+
+  closeRepo: () => {
+    set({ repoPath: null, tasks: [] })
   },
 
   removeRepo: async (path) => {

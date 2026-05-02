@@ -46,7 +46,7 @@ export function TaskItem({ task, isActive }: Props) {
       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status]}`} />
 
       {/* Name */}
-      <span className="flex-1 text-xs truncate">{task.name}</span>
+      <span className="flex-1 text-sm truncate">{task.name}</span>
 
       {/* Delete button - visible on hover */}
       <button
