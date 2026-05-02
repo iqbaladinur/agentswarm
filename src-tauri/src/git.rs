@@ -16,6 +16,17 @@ pub struct FileStatus {
     pub status: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GraphLine {
+    pub prefix: String,
+    pub hash: String,
+    pub short_hash: String,
+    pub message: String,
+    pub author: String,
+    pub date: String,
+    pub refs: String,
+}
+
 fn git(cwd: &str, args: &[&str]) -> anyhow::Result<String> {
     let out = Command::new("git").args(args).current_dir(cwd).output()?;
     if out.status.success() {
@@ -143,6 +154,50 @@ pub fn commit_worktree(worktree_path: &str, message: &str) -> anyhow::Result<()>
     git(worktree_path, &["add", "-A"])?;
     git(worktree_path, &["commit", "-m", message])?;
     Ok(())
+}
+
+pub fn get_current_branch(worktree_path: &str) -> String {
+    git(worktree_path, &["symbolic-ref", "--short", "HEAD"]).unwrap_or_else(|_| "HEAD".to_string())
+}
+
+pub fn get_graph(worktree_path: &str) -> anyhow::Result<Vec<GraphLine>> {
+    let raw = Command::new("git")
+        .args([
+            "log",
+            "--graph",
+            "--format=%H%x00%h%x00%s%x00%an%x00%ai%x00%D",
+            "-30",
+            "--all",
+        ])
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("git log --graph failed: {}", e))?
+        .stdout;
+
+    let text = String::from_utf8_lossy(&raw);
+    let mut lines = Vec::new();
+
+    for line in text.lines() {
+        // Split at \x00 — left is graph prefix, right is structured data
+        if let Some(null_pos) = line.find('\x00') {
+            let prefix = line[..null_pos].to_string();
+            let data = &line[null_pos + 1..];
+            let parts: Vec<&str> = data.splitn(6, '\x00').collect();
+            if parts.len() >= 5 {
+                lines.push(GraphLine {
+                    prefix,
+                    hash: parts[0].to_string(),
+                    short_hash: parts[1].to_string(),
+                    message: parts[2].to_string(),
+                    author: parts[3].to_string(),
+                    date: parts[4].to_string(),
+                    refs: parts.get(5).unwrap_or(&"").to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(lines)
 }
 
 pub fn merge_to_main(

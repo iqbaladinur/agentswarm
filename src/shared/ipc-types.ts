@@ -22,6 +22,16 @@ export interface Commit {
   refs: string
 }
 
+export interface GraphLine {
+  prefix: string
+  hash: string
+  shortHash: string
+  message: string
+  author: string
+  date: string
+  refs: string
+}
+
 export interface FileStatus {
   path: string
   status: 'M' | 'A' | 'D' | '?' | 'R'

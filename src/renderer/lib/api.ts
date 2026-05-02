@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { Task, Repo, Commit, FileStatus } from '@shared/ipc-types'
+import type { Task, Repo, Commit, FileStatus, GraphLine } from '@shared/ipc-types'
 
 // ── REST-equivalent commands ──────────────────────────────────────────────────
 
@@ -24,6 +24,8 @@ export const api = {
       invoke<string>('git_diff', { worktreePath, commitHash }).then((diff) => ({ diff })),
     files: (worktreePath: string) => invoke<FileStatus[]>('git_files', { worktreePath }),
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
+    currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
+    graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
     merge: (worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { worktreePath, branch, targetBranch }),
   },

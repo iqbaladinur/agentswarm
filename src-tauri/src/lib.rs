@@ -120,6 +120,16 @@ fn git_files(worktree_path: String) -> Result<Vec<git::FileStatus>, String> {
 }
 
 #[tauri::command]
+fn git_current_branch(worktree_path: String) -> String {
+    git::get_current_branch(&worktree_path)
+}
+
+#[tauri::command]
+fn git_graph(worktree_path: String) -> Result<Vec<git::GraphLine>, String> {
+    git::get_graph(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn git_commit(worktree_path: String, message: String) -> Result<(), String> {
     git::commit_worktree(&worktree_path, &message).map_err(|e| e.to_string())
 }
@@ -231,6 +241,8 @@ pub fn run() {
             git_diff,
             git_files,
             git_commit,
+            git_current_branch,
+            git_graph,
             git_merge,
             open_vscode,
             dialog_open_folder,
