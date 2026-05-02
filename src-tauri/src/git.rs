@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Commit {
@@ -66,12 +66,22 @@ pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> an
         git(repo_path, &["commit", "--allow-empty", "-m", "init"])?;
     }
 
-    git(repo_path, &["worktree", "add", "-b", branch, worktree_path, "HEAD"])?;
+    // Clone with shared object store — each task gets a standalone git repo
+    // that shares objects with the parent (no disk duplication)
+    Command::new("git")
+        .args(["clone", "--shared", repo_path, worktree_path])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|e| anyhow::anyhow!("failed to clone repo: {}", e))?;
+
+    // Checkout task branch
+    git(worktree_path, &["checkout", "-b", branch])?;
     Ok(())
 }
 
-pub fn remove_worktree(repo_path: &str, worktree_path: &str) -> anyhow::Result<()> {
-    git(repo_path, &["worktree", "remove", "--force", worktree_path])?;
+pub fn remove_worktree(_repo_path: &str, worktree_path: &str) -> anyhow::Result<()> {
+    let _ = std::fs::remove_dir_all(worktree_path);
     Ok(())
 }
 
@@ -228,8 +238,19 @@ pub fn merge_to_main(
     branch: &str,
     target_branch: &str,
 ) -> anyhow::Result<()> {
-    git(worktree_path, &["checkout", target_branch])?;
-    git(worktree_path, &["merge", branch])?;
-    git(worktree_path, &["checkout", branch])?;
-    Ok(())
+    // Push local branch to origin's target branch
+    let refspec = format!("{}:refs/heads/{}", branch, target_branch);
+    Command::new("git")
+        .args(["push", "origin", &refspec])
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("push failed: {}", e))
+        .and_then(|out| {
+            if out.status.success() {
+                Ok(())
+            } else {
+                let stderr = String::from_utf8_lossy(&out.stderr);
+                Err(anyhow::anyhow!("{}", stderr.trim()))
+            }
+        })
 }

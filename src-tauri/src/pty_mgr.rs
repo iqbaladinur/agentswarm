@@ -23,9 +23,10 @@ impl PtyManager {
         let port = free_port()?;
         let ttyd = resolve_ttyd()?;
 
+        // Explicit cd so the shell lands in the worktree even after sourcing rc files
         let shell_cmd = match &initial_cmd {
-            Some(cmd) => format!("{}; exec $SHELL", cmd),
-            None => "exec $SHELL".to_string(),
+            Some(cmd) => format!("cd {} && {}; exec $SHELL", shell_escape(&worktree_path), cmd),
+            None => format!("cd {} && exec $SHELL", shell_escape(&worktree_path)),
         };
 
         let child = Command::new(&ttyd)
@@ -78,6 +79,12 @@ pub fn wait_ready(port: u16, timeout_ms: u64) -> anyhow::Result<()> {
 fn free_port() -> anyhow::Result<u16> {
     let l = std::net::TcpListener::bind("127.0.0.1:0")?;
     Ok(l.local_addr()?.port())
+}
+
+/// Simple shell-escape: wrap in single quotes, escape any internal single quotes.
+fn shell_escape(s: &str) -> String {
+    let escaped: String = s.replace('\'', "'\\''");
+    format!("'{}'", escaped)
 }
 
 fn resolve_ttyd() -> anyhow::Result<String> {

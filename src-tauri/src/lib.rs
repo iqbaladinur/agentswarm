@@ -64,8 +64,8 @@ fn delete_task(state: State<'_, AppState>, task_id: String) -> Result<(), String
     let task = state.db.get_task(&task_id).map_err(|e| e.to_string())?;
 
     if let Some(t) = task {
-        state.pty.lock().unwrap().kill(&task_id);
-        let _ = git::remove_worktree(&t.repo_path, &t.worktree_path);
+        state.pty.lock().unwrap().kill_all(&task_id);
+        let _ = std::fs::remove_dir_all(&t.worktree_path);
     }
 
     state.db.delete_task(&task_id).map_err(|e| e.to_string())
