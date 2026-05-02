@@ -8,7 +8,7 @@ import { TitleBar } from './components/TitleBar'
 
 export default function App() {
   const { repoPath, initialized, init } = useTaskStore()
-  const { panelTaskIds } = useUIStore()
+  const { activeTaskId } = useUIStore()
 
   useEffect(() => {
     init()
@@ -29,8 +29,8 @@ export default function App() {
         {repoPath ? (
           <>
             <Sidebar />
-            <div className="flex-1 overflow-hidden">
-              {panelTaskIds.length === 0 ? <EmptyState /> : <WorkspaceArea />}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {activeTaskId ? <WorkspaceArea /> : <EmptyState />}
             </div>
           </>
         ) : (

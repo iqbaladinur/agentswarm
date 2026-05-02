@@ -1,48 +1,66 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 type TabType = 'terminal' | 'git' | 'files'
-type Layout = 'single' | 'split2' | 'split3'
 
 interface UIStore {
-  // Which tasks are visible in the split panels (1-3 task IDs)
-  panelTaskIds: string[]
-  // Active tab per task
+  // Ordered list of open task tabs
+  openTaskIds: string[]
+  // Currently active task tab
+  activeTaskId: string | null
+  // Active sub-tab per task
   activeTab: Record<string, TabType>
-  layout: Layout
+  // Agent command to auto-run in the first terminal
+  agentCmd: string
 
   openTask: (taskId: string) => void
-  closePanel: (taskId: string) => void
+  closeTask: (taskId: string) => void
+  setActiveTask: (taskId: string) => void
   setTab: (taskId: string, tab: TabType) => void
-  setLayout: (layout: Layout) => void
+  setAgentCmd: (cmd: string) => void
 }
 
-export const useUIStore = create<UIStore>((set, get) => ({
-  panelTaskIds: [],
-  activeTab: {},
-  layout: 'single',
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set, get) => ({
+      openTaskIds: [],
+      activeTaskId: null,
+      activeTab: {},
+      agentCmd: 'claude',
 
-  openTask: (taskId) => {
-    const { panelTaskIds } = get()
-    if (panelTaskIds.includes(taskId)) return
+      openTask: (taskId) => {
+        const { openTaskIds } = get()
+        if (openTaskIds.includes(taskId)) {
+          // Already open — just switch to it
+          set({ activeTaskId: taskId })
+          return
+        }
+        // Add to tab list and make active
+        set({
+          openTaskIds: [...openTaskIds, taskId],
+          activeTaskId: taskId,
+          activeTab: { ...get().activeTab, [taskId]: 'terminal' },
+        })
+      },
 
-    const next = [...panelTaskIds, taskId].slice(-3)
-    const layout: Layout = next.length === 1 ? 'single' : next.length === 2 ? 'split2' : 'split3'
-    set({
-      panelTaskIds: next,
-      layout,
-      activeTab: { ...get().activeTab, [taskId]: 'terminal' },
-    })
-  },
+      closeTask: (taskId) => {
+        const { openTaskIds, activeTaskId } = get()
+        const next = openTaskIds.filter((id) => id !== taskId)
+        // If we closed the active tab, pick the last remaining
+        const newActive = activeTaskId === taskId
+          ? (next[next.length - 1] ?? null)
+          : activeTaskId
+        set({ openTaskIds: next, activeTaskId: newActive })
+      },
 
-  closePanel: (taskId) => {
-    const next = get().panelTaskIds.filter((id) => id !== taskId)
-    const layout: Layout = next.length === 0 ? 'single' : next.length === 1 ? 'single' : 'split2'
-    set({ panelTaskIds: next, layout })
-  },
+      setActiveTask: (taskId) => set({ activeTaskId: taskId }),
 
-  setTab: (taskId, tab) => {
-    set((s) => ({ activeTab: { ...s.activeTab, [taskId]: tab } }))
-  },
+      setTab: (taskId, tab) => {
+        set((s) => ({ activeTab: { ...s.activeTab, [taskId]: tab } }))
+      },
 
-  setLayout: (layout) => set({ layout }),
-}))
+      setAgentCmd: (cmd) => set({ agentCmd: cmd }),
+    }),
+    { name: 'agentswarm-ui' },
+  ),
+)

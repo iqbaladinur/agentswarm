@@ -16,11 +16,11 @@ const TABS = [
 ] as const
 
 export function TaskPanel({ task }: Props) {
-  const { activeTab, setTab, closePanel } = useUIStore()
+  const { activeTab, setTab } = useUIStore()
   const currentTab = activeTab[task.id] ?? 'terminal'
 
   return (
-    <div className="flex flex-col h-full bg-surface-1 border-r border-border last:border-r-0">
+    <div className="flex flex-col h-full bg-surface-1">
       {/* Header */}
       <div className="flex items-center border-b border-border px-3 py-2 gap-2 flex-shrink-0">
         <span className="text-sm text-accent font-mono truncate flex-1">{task.branch}</span>
@@ -32,16 +32,9 @@ export function TaskPanel({ task }: Props) {
         >
           VS Code
         </button>
-
-        <button
-          onClick={() => closePanel(task.id)}
-          className="text-muted hover:text-white text-sm w-5 h-5 flex items-center justify-center hover:bg-surface-3 rounded transition-colors flex-shrink-0"
-        >
-          ×
-        </button>
       </div>
 
-      {/* Tabs */}
+      {/* Sub-tabs: Terminal / Git / Files */}
       <div className="flex border-b border-border flex-shrink-0">
         <div className="flex-1 flex">
           {TABS.map((tab) => (

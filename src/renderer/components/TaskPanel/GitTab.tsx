@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
+import { ConfirmDialog } from '../ConfirmDialog'
+import { AlertDialog } from '../AlertDialog'
 
 interface Props {
   task: Task
@@ -26,6 +28,8 @@ export function GitTab({ task }: Props) {
   const [diff, setDiff] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [merging, setMerging] = useState(false)
+  const [confirmMerge, setConfirmMerge] = useState(false)
+  const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
 
   useEffect(() => {
     loadAll()
@@ -60,14 +64,13 @@ export function GitTab({ task }: Props) {
   }
 
   const handleMerge = async () => {
-    if (!confirm(`Merge "${task.branch}" to ${targetBranch}?`)) return
     setMerging(true)
     try {
       await api.git.merge(task.repoPath, task.worktreePath, task.branch, targetBranch)
-      alert('Merged successfully')
+      setAlertMsg({ title: 'Merge Successful', message: `"${task.branch}" merged to ${targetBranch}` })
       loadAll()
     } catch (err: any) {
-      alert(`Merge failed: ${err.message}`)
+      setAlertMsg({ title: 'Merge Failed', message: err.message })
     } finally {
       setMerging(false)
     }
@@ -82,7 +85,7 @@ export function GitTab({ task }: Props) {
   }
 
   return (
-    <PanelGroup direction="horizontal" className="h-full overflow-hidden">
+    <><PanelGroup direction="horizontal" className="h-full overflow-hidden">
       {/* Commit graph */}
       <Panel defaultSize={40} minSize={25}>
         <div className="flex flex-col h-full border-r border-border">
@@ -135,7 +138,7 @@ export function GitTab({ task }: Props) {
               Refresh
             </button>
             <button
-              onClick={handleMerge}
+              onClick={() => setConfirmMerge(true)}
               disabled={merging || lines.length === 0}
               className="flex-1 py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
             >
@@ -179,5 +182,22 @@ export function GitTab({ task }: Props) {
         </div>
       </Panel>
     </PanelGroup>
+
+      {confirmMerge && (
+        <ConfirmDialog
+          title="Merge branch"
+          message={`Merge "${task.branch}" to ${targetBranch}?`}
+          confirmLabel="Merge"
+          cancelLabel="Cancel"
+          danger={false}
+          onConfirm={() => { setConfirmMerge(false); handleMerge() }}
+          onCancel={() => setConfirmMerge(false)}
+        />
+      )}
+
+      {alertMsg && (
+        <AlertDialog title={alertMsg.title} message={alertMsg.message} onClose={() => setAlertMsg(null)} />
+      )}
+    </>
   )
 }

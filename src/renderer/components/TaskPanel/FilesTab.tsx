@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Task, FileStatus } from '@shared/ipc-types'
 import { api } from '../../lib/api'
+import { AlertDialog } from '../AlertDialog'
 
 interface Props {
   task: Task
@@ -19,6 +20,7 @@ export function FilesTab({ task }: Props) {
   const [loading, setLoading] = useState(true)
   const [commitMsg, setCommitMsg] = useState('')
   const [committing, setCommitting] = useState(false)
+  const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
 
   useEffect(() => {
     loadFiles()
@@ -45,7 +47,7 @@ export function FilesTab({ task }: Props) {
       setCommitMsg('')
       await loadFiles()
     } catch (err: any) {
-      alert(`Commit failed: ${err.message}`)
+      setAlertMsg({ title: 'Commit Failed', message: err.message })
     } finally {
       setCommitting(false)
     }
@@ -64,7 +66,7 @@ export function FilesTab({ task }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <><div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
         <span className="text-sm text-muted">{files.length} changed files</span>
         <button
@@ -123,5 +125,10 @@ export function FilesTab({ task }: Props) {
         </div>
       )}
     </div>
+
+      {alertMsg && (
+        <AlertDialog title={alertMsg.title} message={alertMsg.message} onClose={() => setAlertMsg(null)} />
+      )}
+    </>
   )
 }

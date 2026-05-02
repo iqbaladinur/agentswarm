@@ -1,35 +1,64 @@
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import { useUIStore } from '../store/uiStore'
 import { useTaskStore } from '../store/taskStore'
 import { TaskPanel } from './TaskPanel/TaskPanel'
 
 export function WorkspaceArea() {
-  const { panelTaskIds } = useUIStore()
+  const { openTaskIds, activeTaskId, setActiveTask, closeTask } = useUIStore()
   const { tasks } = useTaskStore()
 
-  const panelTasks = panelTaskIds
-    .map((id) => tasks.find((t) => t.id === id))
-    .filter(Boolean) as typeof tasks
-
-  if (panelTasks.length === 0) return null
-
   return (
-    <PanelGroup direction="horizontal" className="h-full">
-      {panelTasks.map((task, i) => (
-        <>
-          <Panel key={task.id} minSize={20}>
-            <TaskPanel task={task} />
-          </Panel>
-          {i < panelTasks.length - 1 && (
-            <PanelResizeHandle
-              key={`handle-${i}`}
-              className="group relative w-2 flex items-center justify-center hover:bg-accent/10 transition-colors cursor-col-resize"
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Task tabs */}
+      <div className="flex items-center border-b border-border bg-surface-1 flex-shrink-0 overflow-x-auto">
+        {openTaskIds.map((id) => {
+          const t = tasks.find((task) => task.id === id)
+          const isActive = id === activeTaskId
+          return (
+            <div
+              key={id}
+              className={`group flex items-center gap-1 px-3 py-2 text-sm cursor-pointer border-r border-border transition-colors flex-shrink-0 ${
+                isActive
+                  ? 'bg-surface-0 text-white border-b-2 border-b-accent'
+                  : 'text-muted hover:text-white hover:bg-surface-2'
+              }`}
+              onClick={() => setActiveTask(id)}
             >
-              <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-accent transition-colors" />
-            </PanelResizeHandle>
-          )}
-        </>
-      ))}
-    </PanelGroup>
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                t ? (t.status === 'running' ? 'bg-success' : t.status === 'failed' ? 'bg-error' : 'bg-muted') : 'bg-muted'
+              }`} />
+              <span className="truncate max-w-32">{t?.name ?? id}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); closeTask(id) }}
+                className="ml-1 text-muted hover:text-error transition-colors leading-none text-xs"
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Task panels — all mounted, only active one visible */}
+      <div className="flex-1 overflow-hidden relative">
+        {openTaskIds.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-muted text-sm">
+            Select a task
+          </div>
+        ) : (
+          openTaskIds.map((id) => {
+            const t = tasks.find((task) => task.id === id)
+            if (!t) return null
+            return (
+              <div
+                key={id}
+                className={`absolute inset-0 ${id === activeTaskId ? '' : 'invisible pointer-events-none'}`}
+              >
+                <TaskPanel task={t} />
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
   )
 }

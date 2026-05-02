@@ -17,16 +17,12 @@ const STATUS_COLORS: Record<Task['status'], string> = {
 }
 
 export function TaskItem({ task, isActive }: Props) {
-  const { openTask, closePanel } = useUIStore()
+  const { openTask } = useUIStore()
   const { deleteTask } = useTaskStore()
   const [showConfirm, setShowConfirm] = useState(false)
 
   const handleClick = () => {
-    if (isActive) {
-      closePanel(task.id)
-    } else {
-      openTask(task.id)
-    }
+    openTask(task.id)
   }
 
   const handleDelete = async (e: React.MouseEvent) => {

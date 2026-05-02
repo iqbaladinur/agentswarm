@@ -4,16 +4,18 @@ import { useUIStore } from '../../store/uiStore'
 import { TaskItem } from './TaskItem'
 import { NewTaskInput } from './NewTaskInput'
 import { FolderPicker } from '../FolderPicker'
+import { AlertDialog } from '../AlertDialog'
 
 export function Sidebar() {
   const { tasks, repoPath, repos, switchRepo, openRepo, closeRepo, removeRepo } = useTaskStore()
-  const { panelTaskIds } = useUIStore()
+  const { activeTaskId } = useUIStore()
   const [showNewInput, setShowNewInput] = useState(false)
   const [showRepoMenu, setShowRepoMenu] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const repoName = repoPath?.split('/').pop() ?? ''
+  const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -29,7 +31,7 @@ export function Sidebar() {
     try {
       await openRepo(path)
     } catch (err: any) {
-      alert(err.message)
+      setAlertMsg({ title: 'Error', message: err.message })
     }
   }
 
@@ -40,6 +42,10 @@ export function Sidebar() {
           onSelect={(p) => { setShowPicker(false); setShowRepoMenu(false); handlePickerSelect(p) }}
           onClose={() => setShowPicker(false)}
         />
+      )}
+
+      {alertMsg && (
+        <AlertDialog title={alertMsg.title} message={alertMsg.message} onClose={() => setAlertMsg(null)} />
       )}
 
       {/* Repo header with switcher */}
@@ -107,7 +113,7 @@ export function Sidebar() {
       {/* Task list */}
       <div className="flex-1 overflow-y-auto">
         {tasks.map((task) => (
-          <TaskItem key={task.id} task={task} isActive={panelTaskIds.includes(task.id)} />
+          <TaskItem key={task.id} task={task} isActive={activeTaskId === task.id} />
         ))}
         {showNewInput && <NewTaskInput onDone={() => setShowNewInput(false)} />}
       </div>

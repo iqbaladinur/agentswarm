@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Task } from '@shared/ipc-types'
 import { pty } from '../../lib/api'
 import { useTaskStore } from '../../store/taskStore'
+import { useUIStore } from '../../store/uiStore'
 
 interface Terminal {
   index: number
@@ -14,34 +15,100 @@ interface Props {
   isActive: boolean
 }
 
+const AGENT_PRESETS = [
+  { label: 'Claude', value: 'claude' },
+  { label: 'Copilot', value: 'github-copilot' },
+  { label: 'None', value: '' },
+  { label: 'Custom...', value: '__custom__' },
+]
+
 let nextTermIndex = 0
 
 export function TerminalTab({ task }: Props) {
   const [terminals, setTerminals] = useState<Terminal[]>([{ index: nextTermIndex++, port: null, error: '' }])
   const [activeTerm, setActiveTerm] = useState(0)
   const { updateTaskStatus } = useTaskStore()
+  const { agentCmd, setAgentCmd } = useUIStore()
+  const [showAgentMenu, setShowAgentMenu] = useState(false)
+  const [customAgent, setCustomAgent] = useState('')
+  const [editingCustom, setEditingCustom] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const agentBtnRef = useRef<HTMLButtonElement>(null)
+  const taskRef = useRef(task)
+  taskRef.current = task
 
+  // Spawn terminal 1 on mount and whenever the agent command changes
   useEffect(() => {
-    updateTaskStatus(task.id, 'running')
-    spawnTerminal(terminals[0].index)
+    const t = taskRef.current
+    updateTaskStatus(t.id, 'running')
+
+    const idx = nextTermIndex++
+    setTerminals([{ index: idx, port: null, error: '' }])
+    setActiveTerm(0)
+
+    const cmd = agentCmd || undefined
+    ;(async () => {
+      try {
+        const port = await pty.spawn(t.id, idx, t.worktreePath, cmd)
+        setTerminals([{ index: idx, port, error: '' }])
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setTerminals([{ index: idx, port: null, error: msg }])
+      }
+    })()
 
     return () => {
-      pty.killAll(task.id)
-      updateTaskStatus(task.id, 'idle')
+      pty.killAll(t.id)
+      updateTaskStatus(t.id, 'idle')
     }
-  }, [task.id])
+  }, [task.id, agentCmd])
+
+  // Close agent menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowAgentMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const spawnTerminal = useCallback(async (index: number) => {
     try {
-      // Only first terminal auto-launches claude
-      const cmd = index === 0 ? 'claude' : undefined
-      const port = await pty.spawn(task.id, index, task.worktreePath, cmd)
+      const port = await pty.spawn(task.id, index, task.worktreePath)
       setTerminals((prev) => prev.map((t) => t.index === index ? { ...t, port } : t))
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       setTerminals((prev) => prev.map((t) => t.index === index ? { ...t, error: msg } : t))
     }
   }, [task.id, task.worktreePath])
+
+  const toggleAgentMenu = () => {
+    if (agentBtnRef.current) {
+      const rect = agentBtnRef.current.getBoundingClientRect()
+      const right = window.innerWidth - rect.right
+      setMenuPos({ top: rect.bottom + 4, right })
+      setShowAgentMenu(true)
+    }
+  }
+
+  const selectAgent = (value: string) => {
+    if (value === '__custom__') {
+      setCustomAgent(agentCmd)
+      setEditingCustom(true)
+      return
+    }
+    setAgentCmd(value)
+    setShowAgentMenu(false)
+  }
+
+  const saveCustomAgent = () => {
+    setAgentCmd(customAgent)
+    setEditingCustom(false)
+    setShowAgentMenu(false)
+  }
 
   const addTerminal = () => {
     const index = nextTermIndex++
@@ -66,8 +133,10 @@ export function TerminalTab({ task }: Props) {
     })
   }
 
+  const currentPreset = AGENT_PRESETS.find((p) => p.value === agentCmd)
+  const agentLabel = currentPreset ? currentPreset.label : agentCmd || 'None'
+
   const activeTerminal = terminals[activeTerm] ?? terminals[0]
-  const activeTermData = activeTerminal
 
   return (
     <div className="flex flex-col h-full">
@@ -99,6 +168,62 @@ export function TerminalTab({ task }: Props) {
         >
           +
         </button>
+
+        {/* Agent command selector */}
+        <div className="ml-auto relative flex-shrink-0" ref={menuRef}>
+          {editingCustom ? (
+            <div className="flex items-center gap-1 px-2 py-1">
+              <input
+                value={customAgent}
+                onChange={(e) => setCustomAgent(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') saveCustomAgent() }}
+                className="w-28 bg-surface-3 text-white text-xs px-2 py-1 rounded border border-border outline-none"
+                placeholder="command..."
+                autoFocus
+              />
+              <button onClick={saveCustomAgent} className="text-xs text-accent hover:text-white">save</button>
+              <button onClick={() => setEditingCustom(false)} className="text-xs text-muted hover:text-white">x</button>
+            </div>
+          ) : (
+            <button
+              ref={agentBtnRef}
+              onClick={() => {
+                if (showAgentMenu) {
+                  setShowAgentMenu(false)
+                } else {
+                  toggleAgentMenu()
+                }
+              }}
+              className="flex items-center gap-1 px-2 py-1.5 text-xs text-muted hover:text-white hover:bg-surface-2 transition-colors"
+              title="Agent command for terminal 1"
+            >
+              <span className="hidden sm:inline">Agent:</span>
+              <span className="text-accent font-medium">{agentLabel}</span>
+              <span className="text-muted">▾</span>
+            </button>
+          )}
+
+          {showAgentMenu && !editingCustom && menuPos && (
+            <div
+              className="fixed z-50 bg-surface-2 border border-border shadow-lg rounded min-w-36"
+              style={{ top: menuPos.top, right: menuPos.right }}
+            >
+              {AGENT_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => selectAgent(preset.value)}
+                  className={`block w-full text-left px-3 py-2 text-xs transition-colors ${
+                    agentCmd === preset.value
+                      ? 'text-accent bg-surface-3'
+                      : 'text-muted hover:text-white hover:bg-surface-3'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Terminal content */}

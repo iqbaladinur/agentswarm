@@ -10,7 +10,7 @@ interface Props {
 
 export function ConfirmDialog({ title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel', onConfirm, onCancel, danger = true }: Props) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 overflow-y-auto py-4" onClick={onCancel}>
       <div
         className="bg-surface-1 border border-border rounded-lg w-96 p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
