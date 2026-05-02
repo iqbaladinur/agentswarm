@@ -63,7 +63,7 @@ export function GitTab({ task }: Props) {
     if (!confirm(`Merge "${task.branch}" to ${targetBranch}?`)) return
     setMerging(true)
     try {
-      await api.git.merge(task.worktreePath, task.branch, targetBranch)
+      await api.git.merge(task.repoPath, task.worktreePath, task.branch, targetBranch)
       alert('Merged successfully')
       loadAll()
     } catch (err: any) {

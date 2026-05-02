@@ -27,8 +27,8 @@ export const api = {
     currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
     graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
     defaultBranch: (repoPath: string) => invoke<string>('git_default_branch', { repoPath }),
-    merge: (worktreePath: string, branch: string, targetBranch?: string) =>
-      invoke<void>('git_merge', { worktreePath, branch, targetBranch }),
+    merge: (repoPath: string, worktreePath: string, branch: string, targetBranch?: string) =>
+      invoke<void>('git_merge', { repoPath, worktreePath, branch, targetBranch }),
   },
   shell: {
     openVscode: (worktreePath: string) => invoke<void>('open_vscode', { worktreePath }),

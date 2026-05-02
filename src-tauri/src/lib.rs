@@ -147,11 +147,13 @@ fn git_commit(worktree_path: String, message: String) -> Result<(), String> {
 
 #[tauri::command]
 fn git_merge(
+    repo_path: String,
     worktree_path: String,
     branch: String,
     target_branch: Option<String>,
 ) -> Result<(), String> {
     git::merge_to_main(
+        &repo_path,
         &worktree_path,
         &branch,
         target_branch.as_deref().unwrap_or("main"),

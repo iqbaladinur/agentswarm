@@ -234,23 +234,41 @@ pub fn detect_default_branch(repo_path: &str) -> String {
 }
 
 pub fn merge_to_main(
+    repo_path: &str,
     worktree_path: &str,
     branch: &str,
     target_branch: &str,
 ) -> anyhow::Result<()> {
-    // Push local branch to origin's target branch
-    let refspec = format!("{}:refs/heads/{}", branch, target_branch);
-    Command::new("git")
-        .args(["push", "origin", &refspec])
-        .current_dir(worktree_path)
+    // Fetch the task branch from the clone into the original repo
+    git(repo_path, &["fetch", worktree_path, branch])?;
+
+    // Switch to target branch in the original repo, then merge FETCH_HEAD
+    let merge_out = Command::new("git")
+        .args(["checkout", target_branch, "--"])
+        .current_dir(repo_path)
         .output()
-        .map_err(|e| anyhow::anyhow!("push failed: {}", e))
-        .and_then(|out| {
-            if out.status.success() {
-                Ok(())
-            } else {
-                let stderr = String::from_utf8_lossy(&out.stderr);
-                Err(anyhow::anyhow!("{}", stderr.trim()))
-            }
-        })
+        .map_err(|e| anyhow::anyhow!("checkout failed: {}", e))?;
+
+    if !merge_out.status.success() {
+        let stderr = String::from_utf8_lossy(&merge_out.stderr);
+        return Err(anyhow::anyhow!("{}", stderr.trim()));
+    }
+
+    let merge_out = Command::new("git")
+        .args(["merge", "--no-edit", "FETCH_HEAD"])
+        .current_dir(repo_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("merge failed: {}", e))?;
+
+    if !merge_out.status.success() {
+        let stderr = String::from_utf8_lossy(&merge_out.stderr);
+        // Abort to leave repo clean on conflict
+        let _ = Command::new("git")
+            .args(["merge", "--abort"])
+            .current_dir(repo_path)
+            .output();
+        return Err(anyhow::anyhow!("{}", stderr.trim()));
+    }
+
+    Ok(())
 }
