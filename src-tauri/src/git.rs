@@ -34,6 +34,7 @@ pub fn is_git_repo(path: &str) -> bool {
         .unwrap_or(false)
 }
 
+#[allow(dead_code)]
 pub fn get_main_branch(repo_path: &str) -> anyhow::Result<String> {
     git(repo_path, &["symbolic-ref", "--short", "HEAD"])
 }

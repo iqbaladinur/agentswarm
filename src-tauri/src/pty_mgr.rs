@@ -5,7 +5,6 @@ use std::time::{Duration, Instant};
 
 struct TtydSession {
     child: Child,
-    pub port: u16,
 }
 
 pub struct PtyManager {
@@ -38,7 +37,7 @@ impl PtyManager {
             .spawn()
             .map_err(|e| anyhow::anyhow!("failed to spawn ttyd ({}): {}", ttyd, e))?;
 
-        self.sessions.insert(task_id, TtydSession { child, port });
+        self.sessions.insert(task_id, TtydSession { child });
         Ok(port)
     }
 
