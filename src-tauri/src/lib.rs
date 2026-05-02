@@ -120,6 +120,11 @@ fn git_files(worktree_path: String) -> Result<Vec<git::FileStatus>, String> {
 }
 
 #[tauri::command]
+fn git_commit(worktree_path: String, message: String) -> Result<(), String> {
+    git::commit_worktree(&worktree_path, &message).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn git_merge(
     worktree_path: String,
     branch: String,
@@ -225,6 +230,7 @@ pub fn run() {
             git_log,
             git_diff,
             git_files,
+            git_commit,
             git_merge,
             open_vscode,
             dialog_open_folder,

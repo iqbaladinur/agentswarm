@@ -23,6 +23,7 @@ export const api = {
     diff: (worktreePath: string, commitHash: string) =>
       invoke<string>('git_diff', { worktreePath, commitHash }).then((diff) => ({ diff })),
     files: (worktreePath: string) => invoke<FileStatus[]>('git_files', { worktreePath }),
+    commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
     merge: (worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { worktreePath, branch, targetBranch }),
   },

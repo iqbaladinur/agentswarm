@@ -139,6 +139,12 @@ pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
     Ok(files)
 }
 
+pub fn commit_worktree(worktree_path: &str, message: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["add", "-A"])?;
+    git(worktree_path, &["commit", "-m", message])?;
+    Ok(())
+}
+
 pub fn merge_to_main(
     worktree_path: &str,
     branch: &str,

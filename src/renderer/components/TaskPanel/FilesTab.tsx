@@ -17,6 +17,8 @@ const STATUS_STYLE: Record<FileStatus['status'], { label: string; class: string 
 export function FilesTab({ task }: Props) {
   const [files, setFiles] = useState<FileStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [commitMsg, setCommitMsg] = useState('')
+  const [committing, setCommitting] = useState(false)
 
   useEffect(() => {
     loadFiles()
@@ -31,6 +33,21 @@ export function FilesTab({ task }: Props) {
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCommit = async () => {
+    const msg = commitMsg.trim()
+    if (!msg) return
+    setCommitting(true)
+    try {
+      await api.git.commit(task.worktreePath, msg)
+      setCommitMsg('')
+      await loadFiles()
+    } catch (err: any) {
+      alert(`Commit failed: ${err.message}`)
+    } finally {
+      setCommitting(false)
     }
   }
 
@@ -85,6 +102,26 @@ export function FilesTab({ task }: Props) {
           })
         )}
       </div>
+
+      {/* Commit section */}
+      {files.length > 0 && (
+        <div className="border-t border-border p-3 flex-shrink-0 flex flex-col gap-2">
+          <input
+            value={commitMsg}
+            onChange={(e) => setCommitMsg(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleCommit() } }}
+            placeholder="Commit message"
+            className="w-full bg-surface-3 text-white text-sm px-3 py-2 rounded border border-border focus:border-accent outline-none"
+          />
+          <button
+            onClick={handleCommit}
+            disabled={committing || !commitMsg.trim()}
+            className="w-full py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
+          >
+            {committing ? 'Committing...' : 'Commit'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
