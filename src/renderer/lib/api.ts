@@ -26,6 +26,7 @@ export const api = {
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
     currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
     graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
+    defaultBranch: (repoPath: string) => invoke<string>('git_default_branch', { repoPath }),
     merge: (worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { worktreePath, branch, targetBranch }),
   },
@@ -45,8 +46,9 @@ export const api = {
 // ── PTY (ttyd) ───────────────────────────────────────────────────────────────
 
 export const pty = {
-  // Returns the localhost port where ttyd is listening
-  spawn: (taskId: string, worktreePath: string) =>
-    invoke<number>('pty_spawn', { taskId, worktreePath }),
-  kill: (taskId: string) => invoke<void>('pty_kill', { taskId }),
+  spawn: (taskId: string, termIndex: number, worktreePath: string, initialCmd?: string) =>
+    invoke<number>('pty_spawn', { taskId, termIndex, worktreePath, initialCmd }),
+  kill: (taskId: string, termIndex: number) =>
+    invoke<void>('pty_kill', { taskId, termIndex }),
+  killAll: (taskId: string) => invoke<void>('pty_kill_all', { taskId }),
 }

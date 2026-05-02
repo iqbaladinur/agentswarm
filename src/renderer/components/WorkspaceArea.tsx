@@ -23,8 +23,10 @@ export function WorkspaceArea() {
           {i < panelTasks.length - 1 && (
             <PanelResizeHandle
               key={`handle-${i}`}
-              className="w-1 bg-border hover:bg-accent transition-colors cursor-col-resize"
-            />
+              className="group relative w-2 flex items-center justify-center hover:bg-accent/10 transition-colors cursor-col-resize"
+            >
+              <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-accent transition-colors" />
+            </PanelResizeHandle>
           )}
         </>
       ))}

@@ -200,6 +200,29 @@ pub fn get_graph(worktree_path: &str) -> anyhow::Result<Vec<GraphLine>> {
     Ok(lines)
 }
 
+pub fn detect_default_branch(repo_path: &str) -> String {
+    // Try origin/HEAD first (most reliable)
+    if let Ok(out) = git(repo_path, &["symbolic-ref", "--short", "origin/HEAD"]) {
+        if let Some(local) = out.strip_prefix("origin/") {
+            return local.to_string();
+        }
+    }
+    // Fallback: check if main or master exists locally
+    for candidate in &["main", "master"] {
+        if Command::new("git")
+            .args(["show-ref", "--verify", "--quiet", &format!("refs/heads/{}", candidate)])
+            .current_dir(repo_path)
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+        {
+            return candidate.to_string();
+        }
+    }
+    // Last resort
+    "main".to_string()
+}
+
 pub fn merge_to_main(
     worktree_path: &str,
     branch: &str,

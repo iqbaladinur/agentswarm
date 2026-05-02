@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
 
@@ -20,6 +21,7 @@ function formatDate(dateStr: string): string {
 export function GitTab({ task }: Props) {
   const [lines, setLines] = useState<GraphLine[]>([])
   const [branch, setBranch] = useState('')
+  const [targetBranch, setTargetBranch] = useState('main')
   const [selectedHash, setSelectedHash] = useState<string | null>(null)
   const [diff, setDiff] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -32,12 +34,14 @@ export function GitTab({ task }: Props) {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [graph, currentBranch] = await Promise.all([
+      const [graph, currentBranch, defBranch] = await Promise.all([
         api.git.graph(task.worktreePath),
         api.git.currentBranch(task.worktreePath),
+        api.git.defaultBranch(task.repoPath),
       ])
       setLines(graph)
       setBranch(currentBranch)
+      setTargetBranch(defBranch)
     } catch (err) {
       console.error(err)
     } finally {
@@ -56,10 +60,10 @@ export function GitTab({ task }: Props) {
   }
 
   const handleMerge = async () => {
-    if (!confirm(`Merge "${task.branch}" to main?`)) return
+    if (!confirm(`Merge "${task.branch}" to ${targetBranch}?`)) return
     setMerging(true)
     try {
-      await api.git.merge(task.worktreePath, task.branch)
+      await api.git.merge(task.worktreePath, task.branch, targetBranch)
       alert('Merged successfully')
       loadAll()
     } catch (err: any) {
@@ -78,78 +82,76 @@ export function GitTab({ task }: Props) {
   }
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <PanelGroup direction="horizontal" className="h-full overflow-hidden">
       {/* Commit graph */}
-      <div className="w-80 min-w-80 border-r border-border overflow-y-auto flex flex-col">
-        {/* Branch header */}
-        <div className="px-3 py-2 border-b border-border flex-shrink-0 flex items-center gap-2">
-          <span className="text-xs text-muted">Branch:</span>
-          <span className="text-sm text-accent font-mono font-medium truncate">{branch}</span>
-        </div>
+      <Panel defaultSize={40} minSize={25}>
+        <div className="flex flex-col h-full border-r border-border">
+          {/* Branch header */}
+          <div className="px-4 py-2 border-b border-border flex-shrink-0 flex items-center gap-2 bg-surface-1">
+            <span className="text-xs text-muted uppercase tracking-wider">Branch</span>
+            <span className="text-sm text-accent font-mono font-medium truncate">{branch}</span>
+          </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {lines.length === 0 ? (
-            <p className="text-muted text-sm p-4">No commits yet</p>
-          ) : (
-            <div className="font-mono text-xs leading-relaxed">
-              {lines.map((line) => {
-                const isSelected = selectedHash === line.hash
-                return (
-                  <div
-                    key={line.hash + line.prefix}
-                    onClick={() => selectCommit(line.hash)}
-                    className={`flex cursor-pointer border-b border-border/50 transition-colors ${
-                      isSelected ? 'bg-surface-3' : 'hover:bg-surface-2'
-                    }`}
-                  >
-                    {/* Graph prefix */}
-                    <span
-                      className="text-muted whitespace-pre flex-shrink-0 py-1 pl-2"
-                      dangerouslySetInnerHTML={{
-                        __html: line.prefix
-                          .replace(/\*/g, '<span class="text-accent">*</span>')
-                          .replace(/\|/g, '<span class="text-muted">|</span>')
-                          .replace(/\//g, '<span class="text-muted">/</span>')
-                          .replace(/\\/g, '<span class="text-muted">\\</span>')
-                          .replace(/-/g, '<span class="text-muted">-</span>'),
-                      }}
-                    />
-                    {/* Commit data */}
-                    <span className="flex-1 min-w-0 py-1 pr-2">
-                      <span className="text-warning">{line.shortHash} </span>
-                      <span className="text-white">{line.message}</span>
-                      {line.refs && (
-                        <span className="text-accent ml-1">{line.refs}</span>
-                      )}
-                      <span className="text-muted ml-1">— {line.author}, {formatDate(line.date)}</span>
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+          <div className="flex-1 overflow-y-auto">
+            {lines.length === 0 ? (
+              <p className="text-muted text-sm p-4">No commits yet</p>
+            ) : (
+              <div className="font-mono text-sm">
+                {lines.map((line) => {
+                  const isSelected = selectedHash === line.hash
+                  return (
+                    <div
+                      key={line.hash + line.prefix}
+                      onClick={() => selectCommit(line.hash)}
+                      className={`flex cursor-pointer transition-colors ${
+                        isSelected ? 'bg-surface-3/80' : 'hover:bg-surface-2'
+                      }`}
+                    >
+                      {/* Graph prefix */}
+                      <span className="text-muted/60 whitespace-pre py-1.5 pl-3 leading-relaxed select-none">
+                        {line.prefix}
+                      </span>
+                      {/* Commit data */}
+                      <span className="flex-1 min-w-0 py-1.5 pr-3 leading-relaxed truncate">
+                        <span className="text-warning font-bold">{line.shortHash}</span>
+                        <span className="text-white ml-2">{line.message}</span>
+                        {line.refs && (
+                          <span className="text-accent ml-1.5 text-xs">({line.refs})</span>
+                        )}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
-        {/* Merge button */}
-        <div className="p-2 border-t border-border flex-shrink-0 flex gap-2">
-          <button
-            onClick={loadAll}
-            className="flex-1 py-2 text-sm text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={handleMerge}
-            disabled={merging || lines.length === 0}
-            className="flex-1 py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
-          >
-            {merging ? 'Merging...' : 'Merge to main'}
-          </button>
+          {/* Merge button */}
+          <div className="p-2 border-t border-border flex-shrink-0 flex gap-2">
+            <button
+              onClick={loadAll}
+              className="flex-1 py-2 text-sm text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
+            >
+              Refresh
+            </button>
+            <button
+              onClick={handleMerge}
+              disabled={merging || lines.length === 0}
+              className="flex-1 py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
+            >
+              {merging ? 'Merging...' : `Merge to ${targetBranch}`}
+            </button>
+          </div>
         </div>
-      </div>
+      </Panel>
+
+      <PanelResizeHandle className="group relative w-2 flex items-center justify-center hover:bg-accent/10 transition-colors cursor-col-resize">
+        <div className="w-0.5 h-8 rounded-full bg-border group-hover:bg-accent transition-colors" />
+      </PanelResizeHandle>
 
       {/* Diff view */}
-      <div className="flex-1 overflow-y-auto bg-surface-0">
+      <Panel defaultSize={60} minSize={30}>
+        <div className="h-full overflow-y-auto bg-surface-0">
         {diff ? (
           <pre className="text-sm font-mono p-4 whitespace-pre-wrap leading-relaxed">
             {diff.split('\n').map((line, i) => (
@@ -174,7 +176,8 @@ export function GitTab({ task }: Props) {
             Select a commit to view diff
           </div>
         )}
-      </div>
-    </div>
+        </div>
+      </Panel>
+    </PanelGroup>
   )
 }

@@ -17,18 +17,23 @@ impl PtyManager {
     }
 
     // Starts ttyd and stores the child. Returns port immediately without waiting.
-    pub fn start(&mut self, task_id: String, worktree_path: String) -> anyhow::Result<u16> {
-        self.kill(&task_id);
+    pub fn start(&mut self, session_id: String, worktree_path: String, initial_cmd: Option<String>) -> anyhow::Result<u16> {
+        self.kill(&session_id);
 
         let port = free_port()?;
         let ttyd = resolve_ttyd()?;
+
+        let shell_cmd = match &initial_cmd {
+            Some(cmd) => format!("{}; exec $SHELL", cmd),
+            None => "exec $SHELL".to_string(),
+        };
 
         let child = Command::new(&ttyd)
             .args([
                 "--interface", "127.0.0.1",
                 "--port", &port.to_string(),
                 "--writable",
-                "sh", "-c", "claude; exec $SHELL",
+                "sh", "-c", &shell_cmd,
             ])
             .current_dir(&worktree_path)
             .stdin(Stdio::null())
@@ -37,13 +42,23 @@ impl PtyManager {
             .spawn()
             .map_err(|e| anyhow::anyhow!("failed to spawn ttyd ({}): {}", ttyd, e))?;
 
-        self.sessions.insert(task_id, TtydSession { child });
+        self.sessions.insert(session_id, TtydSession { child });
         Ok(port)
     }
 
-    pub fn kill(&mut self, task_id: &str) {
-        if let Some(mut s) = self.sessions.remove(task_id) {
+    pub fn kill(&mut self, session_id: &str) {
+        if let Some(mut s) = self.sessions.remove(session_id) {
             let _ = s.child.kill();
+        }
+    }
+
+    pub fn kill_all(&mut self, prefix: &str) {
+        let keys: Vec<String> = self.sessions.keys()
+            .filter(|k| k.starts_with(prefix))
+            .cloned()
+            .collect();
+        for key in keys {
+            self.kill(&key);
         }
     }
 }

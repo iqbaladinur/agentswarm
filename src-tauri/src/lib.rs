@@ -77,25 +77,31 @@ fn delete_task(state: State<'_, AppState>, task_id: String) -> Result<(), String
 fn pty_spawn(
     state: State<'_, AppState>,
     task_id: String,
+    term_index: u32,
     worktree_path: String,
+    initial_cmd: Option<String>,
 ) -> Result<u16, String> {
-    // Lock briefly just to start the process and record the session
+    let session_id = format!("{}:{}", task_id, term_index);
     let port = state
         .pty
         .lock()
         .unwrap()
-        .start(task_id, worktree_path)
+        .start(session_id, worktree_path, initial_cmd)
         .map_err(|e| e.to_string())?;
 
-    // Wait for ttyd to be ready outside the lock so other commands can proceed
     pty_mgr::wait_ready(port, 5000).map_err(|e| e.to_string())?;
-
     Ok(port)
 }
 
 #[tauri::command]
-fn pty_kill(state: State<'_, AppState>, task_id: String) {
-    state.pty.lock().unwrap().kill(&task_id);
+fn pty_kill(state: State<'_, AppState>, task_id: String, term_index: u32) {
+    let session_id = format!("{}:{}", task_id, term_index);
+    state.pty.lock().unwrap().kill(&session_id);
+}
+
+#[tauri::command]
+fn pty_kill_all(state: State<'_, AppState>, task_id: String) {
+    state.pty.lock().unwrap().kill_all(&task_id);
 }
 
 // ── Git ───────────────────────────────────────────────────────────────────────
@@ -127,6 +133,11 @@ fn git_current_branch(worktree_path: String) -> String {
 #[tauri::command]
 fn git_graph(worktree_path: String) -> Result<Vec<git::GraphLine>, String> {
     git::get_graph(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_default_branch(repo_path: String) -> String {
+    git::detect_default_branch(&repo_path)
 }
 
 #[tauri::command]
@@ -237,12 +248,14 @@ pub fn run() {
             delete_task,
             pty_spawn,
             pty_kill,
+            pty_kill_all,
             git_log,
             git_diff,
             git_files,
             git_commit,
             git_current_branch,
             git_graph,
+            git_default_branch,
             git_merge,
             open_vscode,
             dialog_open_folder,
