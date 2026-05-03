@@ -138,6 +138,11 @@ fn git_files(worktree_path: String) -> Result<Vec<git::FileStatus>, String> {
 }
 
 #[tauri::command]
+fn git_file_diff(worktree_path: String, file_path: String) -> Result<String, String> {
+    git::get_file_diff(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn git_current_branch(worktree_path: String) -> String {
     git::get_current_branch(&worktree_path)
 }
@@ -267,6 +272,7 @@ pub fn run() {
             git_log,
             git_diff,
             git_files,
+            git_file_diff,
             git_commit,
             git_current_branch,
             git_graph,

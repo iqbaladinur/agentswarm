@@ -130,6 +130,32 @@ pub fn get_diff(worktree_path: &str, commit_hash: &str) -> anyhow::Result<String
     git(worktree_path, &["show", commit_hash, "--stat", "--patch"])
 }
 
+pub fn get_file_diff(worktree_path: &str, file_path: &str) -> anyhow::Result<String> {
+    let result = git(worktree_path, &["diff", "HEAD", "--no-color", "--", file_path])?;
+    if !result.is_empty() {
+        return Ok(result);
+    }
+    // For untracked files: show the full content as a new file
+    let full_path = format!("{}/{}", worktree_path, file_path);
+    let path = std::path::Path::new(&full_path);
+    if path.exists() {
+        let content = std::fs::read_to_string(path)
+            .unwrap_or_default();
+        if !content.is_empty() {
+            return Ok(format!(
+                "diff --git a/{} b/{}\nnew file mode 100644\nindex 0000000..0000000\n--- /dev/null\n+++ b/{}\n@@ -0,0 +1,{} @@\n{}",
+                file_path, file_path, file_path,
+                content.lines().count(),
+                content.lines()
+                    .map(|l| format!("+{}", l))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            ));
+        }
+    }
+    Ok(result)
+}
+
 pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
     let out = Command::new("git")
         .args(["status", "--porcelain"])

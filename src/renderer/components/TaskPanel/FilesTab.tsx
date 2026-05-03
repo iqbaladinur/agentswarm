@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, FileStatus } from '@shared/ipc-types'
 import { api } from '../../lib/api'
 import { AlertDialog } from '../AlertDialog'
@@ -16,9 +17,66 @@ const STATUS_STYLE: Record<FileStatus['status'], { label: string; class: string 
   '?': { label: '?', class: 'text-muted' },
 }
 
+function DiffViewer({ diff, filePath, onOpenInVscode }: { diff: string; filePath: string | null; onOpenInVscode: (path: string) => void }) {
+  if (!filePath) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted text-sm">
+        Select a file to view changes
+      </div>
+    )
+  }
+
+  if (!diff) {
+    return (
+      <div className="flex items-center justify-center h-full text-muted text-sm">
+        No diff available
+      </div>
+    )
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Diff header */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-1 flex-shrink-0">
+        <span className="text-sm text-white font-mono truncate">{filePath}</span>
+        <button
+          onClick={() => onOpenInVscode(filePath)}
+          className="text-xs text-muted hover:text-white transition-colors flex-shrink-0"
+        >
+          Open in VS Code
+        </button>
+      </div>
+      {/* Diff content */}
+      <div className="flex-1 overflow-y-auto">
+        <pre className="text-sm font-mono p-4 whitespace-pre-wrap leading-relaxed">
+          {diff.split('\n').map((line, i) => (
+            <span
+              key={i}
+              className={
+                line.startsWith('+') && !line.startsWith('+++')
+                  ? 'text-success block'
+                  : line.startsWith('-') && !line.startsWith('---')
+                  ? 'text-error block'
+                  : line.startsWith('@@')
+                  ? 'text-accent block'
+                  : 'text-muted block'
+              }
+            >
+              {line}
+            </span>
+          ))}
+        </pre>
+      </div>
+    </div>
+  )
+}
+
 export function FilesTab({ task, isActive }: Props) {
   const [files, setFiles] = useState<FileStatus[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedFile, setSelectedFile] = useState<string | null>(null)
+  const [diff, setDiff] = useState<string>('')
+  const [diffLoading, setDiffLoading] = useState(false)
   const [commitMsg, setCommitMsg] = useState('')
   const [committing, setCommitting] = useState(false)
   const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
@@ -44,6 +102,20 @@ export function FilesTab({ task, isActive }: Props) {
     }
   }
 
+  const loadDiff = async (filePath: string) => {
+    setSelectedFile(filePath)
+    setDiffLoading(true)
+    try {
+      const result = await api.git.fileDiff(task.worktreePath, filePath)
+      setDiff(result)
+    } catch (err) {
+      console.error(err)
+      setDiff('')
+    } finally {
+      setDiffLoading(false)
+    }
+  }
+
   const handleCommit = async () => {
     const msg = commitMsg.trim()
     if (!msg) return
@@ -51,6 +123,8 @@ export function FilesTab({ task, isActive }: Props) {
     try {
       await api.git.commit(task.worktreePath, msg)
       setCommitMsg('')
+      setSelectedFile(null)
+      setDiff('')
       await loadFiles()
     } catch (err: any) {
       setAlertMsg({ title: 'Commit Failed', message: err.message })
@@ -73,8 +147,9 @@ export function FilesTab({ task, isActive }: Props) {
 
   return (
     <><div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border flex-shrink-0">
-        <span className="text-sm text-muted">{files.length} changed files</span>
+        <span className="text-sm text-muted">{files.length} changed file{files.length !== 1 ? 's' : ''}</span>
         <button
           onClick={loadFiles}
           className="text-sm text-muted hover:text-white transition-colors"
@@ -83,31 +158,55 @@ export function FilesTab({ task, isActive }: Props) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      {/* Main split panel */}
+      <div className="flex-1 overflow-hidden">
         {files.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted text-sm">
             No changes
           </div>
         ) : (
-          files.map((file) => {
-            const style = STATUS_STYLE[file.status]
-            return (
-              <div
-                key={file.path}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-surface-3 cursor-pointer group border-b border-border transition-colors"
-                onClick={() => handleOpenVscode(file.path)}
-                title="Open in VS Code"
-              >
-                <span className={`text-sm font-mono font-bold w-5 flex-shrink-0 ${style.class}`}>
-                  {style.label}
-                </span>
-                <span className="text-sm text-white font-mono truncate flex-1">{file.path}</span>
-                <span className="text-xs text-muted opacity-0 group-hover:opacity-100 transition-opacity">
-                  open
-                </span>
+          <PanelGroup direction="horizontal" className="h-full">
+            {/* File list */}
+            <Panel defaultSize={35} minSize={20}>
+              <div className="h-full flex flex-col">
+                <div className="flex-1 overflow-y-auto">
+                  {files.map((file) => {
+                    const style = STATUS_STYLE[file.status]
+                    const isSelected = selectedFile === file.path
+                    return (
+                      <div
+                        key={file.path}
+                        className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer border-b border-border transition-colors ${
+                          isSelected ? 'bg-surface-3' : 'hover:bg-surface-2'
+                        }`}
+                        onClick={() => loadDiff(file.path)}
+                      >
+                        <span className={`text-sm font-mono font-bold w-5 flex-shrink-0 ${style.class}`}>
+                          {style.label}
+                        </span>
+                        <span className="text-sm text-white font-mono truncate flex-1">{file.path}</span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            )
-          })
+            </Panel>
+
+            <PanelResizeHandle className="group w-[7px] bg-transparent hover:bg-accent/20 active:bg-accent/30 transition-colors cursor-col-resize relative flex items-center justify-center">
+              <div className="w-px h-full bg-border/60 group-hover:bg-accent/50 transition-colors" />
+            </PanelResizeHandle>
+
+            {/* Diff view */}
+            <Panel defaultSize={65} minSize={30} className="bg-surface-0">
+              {diffLoading ? (
+                <div className="flex items-center justify-center h-full text-muted text-xs">
+                  Loading diff...
+                </div>
+              ) : (
+                <DiffViewer diff={diff} filePath={selectedFile} onOpenInVscode={handleOpenVscode} />
+              )}
+            </Panel>
+          </PanelGroup>
         )}
       </div>
 

@@ -25,6 +25,8 @@ export const api = {
     diff: (worktreePath: string, commitHash: string) =>
       invoke<string>('git_diff', { worktreePath, commitHash }).then((diff) => ({ diff })),
     files: (worktreePath: string) => invoke<FileStatus[]>('git_files', { worktreePath }),
+    fileDiff: (worktreePath: string, filePath: string) =>
+      invoke<string>('git_file_diff', { worktreePath, filePath }),
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
     currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
     graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
