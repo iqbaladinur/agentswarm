@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Task, Repo } from '@shared/ipc-types'
 import { api } from '../lib/api'
+import { useUIStore } from './uiStore'
 
 interface TaskStore {
   repos: Repo[]
@@ -99,6 +100,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
   deleteTask: async (taskId) => {
     await api.task.delete(taskId)
+    // Close the task tab if it's open
+    useUIStore.getState().closeTask(taskId)
     const { taskCache } = get()
     const next = { ...taskCache }
     delete next[taskId]
