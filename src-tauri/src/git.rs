@@ -17,6 +17,7 @@ pub struct FileStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct GraphLine {
     pub prefix: String,
     pub hash: String,
@@ -175,7 +176,7 @@ pub fn get_graph(worktree_path: &str) -> anyhow::Result<Vec<GraphLine>> {
         .args([
             "log",
             "--graph",
-            "--format=%H%x00%h%x00%s%x00%an%x00%ai%x00%D",
+            "--format=%x00%H%x00%h%x00%s%x00%an%x00%ai%x00%D",
             "-30",
             "--all",
         ])

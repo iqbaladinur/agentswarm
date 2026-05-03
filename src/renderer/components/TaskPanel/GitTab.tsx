@@ -114,13 +114,15 @@ export function GitTab({ task }: Props) {
                       <span className="text-muted/60 whitespace-pre py-1.5 pl-3 leading-relaxed select-none">
                         {line.prefix}
                       </span>
-                      {/* Commit data */}
-                      <span className="flex-1 min-w-0 py-1.5 pr-3 leading-relaxed truncate">
-                        <span className="text-warning font-bold">{line.shortHash}</span>
-                        <span className="text-white ml-2">{line.message}</span>
-                        {line.refs && (
-                          <span className="text-accent ml-1.5 text-xs">({line.refs})</span>
-                        )}
+                      {/* Commit data — stacked vertically */}
+                      <span className="flex-1 min-w-0 py-1.5 pr-3 leading-relaxed">
+                        <span className="text-white truncate block">{line.message}</span>
+                        <div className="flex items-center gap-3 text-xs mt-0.5">
+                          <span className="text-muted">by {line.author}</span>
+                          {line.refs && (
+                            <span className="text-accent">{line.refs}</span>
+                          )}
+                        </div>
                       </span>
                     </div>
                   )

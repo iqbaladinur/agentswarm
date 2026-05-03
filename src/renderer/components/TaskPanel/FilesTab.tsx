@@ -5,6 +5,7 @@ import { AlertDialog } from '../AlertDialog'
 
 interface Props {
   task: Task
+  isActive: boolean
 }
 
 const STATUS_STYLE: Record<FileStatus['status'], { label: string; class: string }> = {
@@ -15,7 +16,7 @@ const STATUS_STYLE: Record<FileStatus['status'], { label: string; class: string 
   '?': { label: '?', class: 'text-muted' },
 }
 
-export function FilesTab({ task }: Props) {
+export function FilesTab({ task, isActive }: Props) {
   const [files, setFiles] = useState<FileStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [commitMsg, setCommitMsg] = useState('')
@@ -25,6 +26,11 @@ export function FilesTab({ task }: Props) {
   useEffect(() => {
     loadFiles()
   }, [task.id])
+
+  // Auto-refresh when this tab becomes active
+  useEffect(() => {
+    if (isActive) loadFiles()
+  }, [isActive])
 
   const loadFiles = async () => {
     setLoading(true)

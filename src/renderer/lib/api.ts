@@ -16,6 +16,8 @@ export const api = {
     create: (repoPath: string, name: string) =>
       invoke<Task>('create_task', { repoPath, name }),
     delete: (taskId: string) => invoke<void>('delete_task', { taskId }),
+    updateStatus: (taskId: string, status: string) =>
+      invoke<void>('update_task_status', { taskId, status }),
   },
   git: {
     log: (worktreePath: string, baseBranch?: string) =>

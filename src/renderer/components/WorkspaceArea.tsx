@@ -4,14 +4,16 @@ import { TaskPanel } from './TaskPanel/TaskPanel'
 
 export function WorkspaceArea() {
   const { openTaskIds, activeTaskId, setActiveTask, closeTask } = useUIStore()
-  const { tasks } = useTaskStore()
+  const { tasks, taskCache } = useTaskStore()
+
+  const findTask = (id: string) => tasks.find((t) => t.id === id) ?? taskCache[id]
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Task tabs */}
       <div className="flex items-center border-b border-border bg-surface-1 flex-shrink-0 overflow-x-auto">
         {openTaskIds.map((id) => {
-          const t = tasks.find((task) => task.id === id)
+          const t = findTask(id)
           const isActive = id === activeTaskId
           return (
             <div
@@ -26,7 +28,10 @@ export function WorkspaceArea() {
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                 t ? (t.status === 'running' ? 'bg-success' : t.status === 'failed' ? 'bg-error' : 'bg-muted') : 'bg-muted'
               }`} />
-              <span className="truncate max-w-32">{t?.name ?? id}</span>
+              <span className="flex items-baseline gap-1 min-w-0">
+                <span className="truncate">{t?.name ?? id}</span>
+                {t && <span className="text-muted text-xs shrink-0">· {t.repoPath.split('/').pop()}</span>}
+              </span>
               <button
                 onClick={(e) => { e.stopPropagation(); closeTask(id) }}
                 className="ml-1 text-muted hover:text-error transition-colors leading-none text-xs"
@@ -46,7 +51,7 @@ export function WorkspaceArea() {
           </div>
         ) : (
           openTaskIds.map((id) => {
-            const t = tasks.find((task) => task.id === id)
+            const t = findTask(id)
             if (!t) return null
             return (
               <div

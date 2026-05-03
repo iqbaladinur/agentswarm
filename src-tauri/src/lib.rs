@@ -60,6 +60,18 @@ fn create_task(
 }
 
 #[tauri::command]
+fn update_task_status(
+    state: State<'_, AppState>,
+    task_id: String,
+    status: String,
+) -> Result<(), String> {
+    state
+        .db
+        .update_task_status(&task_id, &status)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn delete_task(state: State<'_, AppState>, task_id: String) -> Result<(), String> {
     let task = state.db.get_task(&task_id).map_err(|e| e.to_string())?;
 
@@ -247,6 +259,7 @@ pub fn run() {
             validate_repo,
             list_tasks,
             create_task,
+            update_task_status,
             delete_task,
             pty_spawn,
             pty_kill,

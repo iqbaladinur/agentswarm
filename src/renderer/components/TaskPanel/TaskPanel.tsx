@@ -63,7 +63,7 @@ export function TaskPanel({ task }: Props) {
           <GitTab task={task} />
         </div>
         <div className={`absolute inset-0 overflow-hidden ${currentTab === 'files' ? '' : 'hidden'}`}>
-          <FilesTab task={task} />
+          <FilesTab task={task} isActive={currentTab === 'files'} />
         </div>
       </div>
     </div>
