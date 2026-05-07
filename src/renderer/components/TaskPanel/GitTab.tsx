@@ -4,6 +4,7 @@ import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AlertDialog } from '../AlertDialog'
+import { BranchSelect } from '../BranchSelect'
 
 interface Props {
   task: Task
@@ -23,6 +24,7 @@ function formatDate(dateStr: string): string {
 export function GitTab({ task }: Props) {
   const [lines, setLines] = useState<GraphLine[]>([])
   const [branch, setBranch] = useState('')
+  const [branches, setBranches] = useState<string[]>([])
   const [targetBranch, setTargetBranch] = useState('main')
   const [selectedHash, setSelectedHash] = useState<string | null>(null)
   const [diff, setDiff] = useState<string>('')
@@ -38,14 +40,16 @@ export function GitTab({ task }: Props) {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [graph, currentBranch, defBranch] = await Promise.all([
+      const [graph, currentBranch, defBranch, allBranches] = await Promise.all([
         api.git.graph(task.worktreePath),
         api.git.currentBranch(task.worktreePath),
         api.git.defaultBranch(task.repoPath),
+        api.git.listBranches(task.repoPath),
       ])
       setLines(graph)
       setBranch(currentBranch)
       setTargetBranch(defBranch)
+      setBranches(allBranches)
     } catch (err) {
       console.error(err)
     } finally {
@@ -131,21 +135,29 @@ export function GitTab({ task }: Props) {
             )}
           </div>
 
-          {/* Merge button */}
-          <div className="p-2 border-t border-border flex-shrink-0 flex gap-2">
-            <button
-              onClick={loadAll}
-              className="flex-1 py-2 text-sm text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={() => setConfirmMerge(true)}
-              disabled={merging || lines.length === 0}
-              className="flex-1 py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
-            >
-              {merging ? 'Merging...' : `Merge to ${targetBranch}`}
-            </button>
+          {/* Merge controls */}
+          <div className="p-2 border-t border-border flex-shrink-0 space-y-1.5">
+            <BranchSelect
+              branches={branches}
+              value={targetBranch}
+              onChange={setTargetBranch}
+              position="above"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={loadAll}
+                className="flex-1 py-1.5 text-sm text-muted hover:text-white hover:bg-surface-3 rounded transition-colors"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={() => setConfirmMerge(true)}
+                disabled={merging || lines.length === 0}
+                className="flex-1 py-1.5 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
+              >
+                {merging ? 'Merging...' : 'Merge'}
+              </button>
+            </div>
           </div>
         </div>
       </Panel>

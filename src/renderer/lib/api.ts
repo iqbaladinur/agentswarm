@@ -13,8 +13,8 @@ export const api = {
   },
   task: {
     list: (repoPath: string) => invoke<Task[]>('list_tasks', { repoPath }),
-    create: (repoPath: string, name: string) =>
-      invoke<Task>('create_task', { repoPath, name }),
+    create: (repoPath: string, name: string, branch?: string) =>
+      invoke<Task>('create_task', { repoPath, name, branch }),
     delete: (taskId: string) => invoke<void>('delete_task', { taskId }),
     updateStatus: (taskId: string, status: string) =>
       invoke<void>('update_task_status', { taskId, status }),
@@ -30,6 +30,7 @@ export const api = {
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
     currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
     graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
+    listBranches: (repoPath: string) => invoke<string[]>('list_branches', { repoPath }),
     defaultBranch: (repoPath: string) => invoke<string>('git_default_branch', { repoPath }),
     merge: (repoPath: string, worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { repoPath, worktreePath, branch, targetBranch }),

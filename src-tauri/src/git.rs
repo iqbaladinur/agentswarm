@@ -51,7 +51,27 @@ pub fn get_main_branch(repo_path: &str) -> anyhow::Result<String> {
     git(repo_path, &["symbolic-ref", "--short", "HEAD"])
 }
 
-pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> anyhow::Result<()> {
+pub fn list_branches(repo_path: &str) -> Vec<String> {
+    match Command::new("git")
+        .args(["branch", "--format=%(refname:short)"])
+        .current_dir(repo_path)
+        .output()
+    {
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect(),
+        _ => vec![],
+    }
+}
+
+pub fn create_worktree(
+    repo_path: &str,
+    branch: &str,
+    worktree_path: &str,
+    new_branch: bool,
+) -> anyhow::Result<()> {
     if let Some(parent) = std::path::Path::new(worktree_path).parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -76,8 +96,11 @@ pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> an
         .status()
         .map_err(|e| anyhow::anyhow!("failed to clone repo: {}", e))?;
 
-    // Checkout task branch
-    git(worktree_path, &["checkout", "-b", branch])?;
+    if new_branch {
+        git(worktree_path, &["checkout", "-b", branch])?;
+    } else {
+        git(worktree_path, &["checkout", branch])?;
+    }
     Ok(())
 }
 

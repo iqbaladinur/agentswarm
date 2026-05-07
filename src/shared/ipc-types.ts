@@ -69,7 +69,7 @@ export const IPC = {
 } as const
 
 // Payload types
-export interface TaskCreatePayload { repoPath: string; name: string }
+export interface TaskCreatePayload { repoPath: string; name: string; branch?: string }
 export interface TaskListPayload { repoPath: string }
 export interface TaskDeletePayload { taskId: string }
 export interface TaskUpdateStatusPayload { taskId: string; status: Task['status'] }
