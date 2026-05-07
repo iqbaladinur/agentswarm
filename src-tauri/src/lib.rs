@@ -130,6 +130,20 @@ fn list_branches(repo_path: String) -> Vec<String> {
 }
 
 #[tauri::command]
+async fn generate_commit_message(
+    worktree_path: String,
+    agent_cmd: String,
+    agent_args: Vec<String>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        git::generate_commit_message(&worktree_path, &agent_cmd, &agent_args)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 fn git_log(
     worktree_path: String,
     base_branch: Option<String>,
@@ -278,6 +292,7 @@ pub fn run() {
             update_task_status,
             delete_task,
             list_branches,
+            generate_commit_message,
             pty_spawn,
             pty_kill,
             pty_kill_all,

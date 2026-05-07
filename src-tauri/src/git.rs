@@ -283,6 +283,59 @@ pub fn detect_default_branch(repo_path: &str) -> String {
     "main".to_string()
 }
 
+pub fn generate_commit_message(worktree_path: &str, agent_cmd: &str, agent_args: &[String]) -> anyhow::Result<String> {
+    let diff = Command::new("git")
+        .args(["diff", "HEAD"])
+        .current_dir(worktree_path)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+
+    let status = Command::new("git")
+        .args(["status", "--porcelain"])
+        .current_dir(worktree_path)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+
+    let mut context = diff.trim().to_string();
+    if context.is_empty() {
+        if status.trim().is_empty() {
+            anyhow::bail!("No changes to commit");
+        }
+        context = format!("Changed files:\n{}", status);
+    }
+
+    let truncated = if context.len() > 4000 {
+        format!("{}...\n(truncated)", &context[..4000])
+    } else {
+        context
+    };
+
+    let prompt = format!(
+        "Write a concise git commit message (max 72 chars first line, then blank line then body if needed) for these changes. Output ONLY the commit message, nothing else.\n\nChanges:\n{}",
+        truncated
+    );
+
+    let mut cmd = Command::new(agent_cmd);
+    for arg in agent_args {
+        cmd.arg(arg);
+    }
+    cmd.arg(&prompt);
+
+    let output = cmd
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("Failed to run {}: {}", agent_cmd, e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("{}", stderr.trim());
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 pub fn merge_to_main(
     repo_path: &str,
     worktree_path: &str,

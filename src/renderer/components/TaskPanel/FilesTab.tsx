@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, FileStatus } from '@shared/ipc-types'
 import { api } from '../../lib/api'
@@ -80,6 +80,29 @@ export function FilesTab({ task, isActive }: Props) {
   const [commitMsg, setCommitMsg] = useState('')
   const [committing, setCommitting] = useState(false)
   const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
+  const [agentCmd, setAgentCmd] = useState('claude')
+  const [agentArgs, setAgentArgs] = useState<string[]>(['-p'])
+  const [agentLabel, setAgentLabel] = useState('Claude')
+  const [generating, setGenerating] = useState(false)
+  const [showAgentMenu, setShowAgentMenu] = useState(false)
+  const agentMenuRef = useRef<HTMLDivElement>(null)
+
+  const AGENT_PRESETS = [
+    { label: 'Claude', cmd: 'claude', args: ['-p'] },
+    { label: 'OpenCode', cmd: 'opencode', args: ['run'] },
+    { label: 'Gemini', cmd: 'gemini', args: [] },
+    { label: 'Copilot', cmd: 'github-copilot', args: ['-p'] },
+  ]
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (agentMenuRef.current && !agentMenuRef.current.contains(e.target as Node)) {
+        setShowAgentMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   useEffect(() => {
     loadFiles()
@@ -113,6 +136,18 @@ export function FilesTab({ task, isActive }: Props) {
       setDiff('')
     } finally {
       setDiffLoading(false)
+    }
+  }
+
+  const handleGenerateMessage = async () => {
+    setGenerating(true)
+    try {
+      const msg = await api.git.generateCommitMessage(task.worktreePath, agentCmd, agentArgs)
+      setCommitMsg(msg)
+    } catch (err: any) {
+      setAlertMsg({ title: 'Generation Failed', message: err.message || String(err) })
+    } finally {
+      setGenerating(false)
     }
   }
 
@@ -220,13 +255,53 @@ export function FilesTab({ task, isActive }: Props) {
             placeholder="Commit message"
             className="w-full bg-surface-3 text-white text-sm px-3 py-2 rounded border border-border focus:border-accent outline-none"
           />
-          <button
-            onClick={handleCommit}
-            disabled={committing || !commitMsg.trim()}
-            className="w-full py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
-          >
-            {committing ? 'Committing...' : 'Commit'}
-          </button>
+          <div className="flex gap-2">
+            <div className="relative flex-shrink-0" ref={agentMenuRef}>
+              <button
+                onClick={() => setShowAgentMenu((v) => !v)}
+                className="h-full px-2.5 py-1.5 text-sm bg-surface-3 text-white border border-border rounded hover:border-accent transition-colors flex items-center gap-1"
+              >
+                <span className="text-muted">{generating ? '...' : 'AI'}</span>
+                <span className="text-xs text-muted">{showAgentMenu ? '▴' : '▾'}</span>
+              </button>
+              {showAgentMenu && (
+                <div className="absolute bottom-full mb-1 left-0 z-30 bg-surface-2 border border-border shadow-lg min-w-[140px]">
+                  {AGENT_PRESETS.map((a) => (
+                    <button
+                      key={a.cmd}
+                      onClick={() => { setAgentCmd(a.cmd); setAgentArgs(a.args); setAgentLabel(a.label); setShowAgentMenu(false) }}
+                      className={`w-full px-3 py-1.5 text-left text-sm transition-colors ${
+                        a.cmd === agentCmd ? 'text-accent bg-surface-3' : 'text-muted hover:text-white hover:bg-surface-3'
+                      }`}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleGenerateMessage}
+              disabled={generating}
+              className="flex-1 py-2 text-sm bg-surface-3 hover:bg-surface-2 text-white rounded border border-border transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {generating ? (
+                <>
+                  <span className="inline-block w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                'Generate'
+              )}
+            </button>
+            <button
+              onClick={handleCommit}
+              disabled={committing || !commitMsg.trim()}
+              className="flex-1 py-2 text-sm bg-accent hover:bg-accent-dim text-white rounded transition-colors disabled:opacity-50"
+            >
+              {committing ? 'Committing...' : 'Commit'}
+            </button>
+          </div>
         </div>
       )}
     </div>

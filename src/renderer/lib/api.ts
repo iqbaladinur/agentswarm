@@ -34,6 +34,8 @@ export const api = {
     defaultBranch: (repoPath: string) => invoke<string>('git_default_branch', { repoPath }),
     merge: (repoPath: string, worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { repoPath, worktreePath, branch, targetBranch }),
+    generateCommitMessage: (worktreePath: string, agentCmd: string, agentArgs: string[]) =>
+      invoke<string>('generate_commit_message', { worktreePath, agentCmd, agentArgs }),
   },
   shell: {
     openVscode: (worktreePath: string) => invoke<void>('open_vscode', { worktreePath }),
