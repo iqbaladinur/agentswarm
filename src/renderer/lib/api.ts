@@ -25,6 +25,10 @@ export const api = {
     diff: (worktreePath: string, commitHash: string) =>
       invoke<string>('git_diff', { worktreePath, commitHash }).then((diff) => ({ diff })),
     files: (worktreePath: string) => invoke<FileStatus[]>('git_files', { worktreePath }),
+    stage: (worktreePath: string, filePath: string) => invoke<void>('git_stage', { worktreePath, filePath }),
+    unstage: (worktreePath: string, filePath: string) => invoke<void>('git_unstage', { worktreePath, filePath }),
+    stageAll: (worktreePath: string) => invoke<void>('git_stage_all', { worktreePath }),
+    unstageAll: (worktreePath: string) => invoke<void>('git_unstage_all', { worktreePath }),
     fileDiff: (worktreePath: string, filePath: string) =>
       invoke<string>('git_file_diff', { worktreePath, filePath }),
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),

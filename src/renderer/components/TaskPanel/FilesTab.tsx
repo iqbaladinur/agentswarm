@@ -36,7 +36,6 @@ function DiffViewer({ diff, filePath, onOpenInVscode }: { diff: string; filePath
 
   return (
     <div className="h-full flex flex-col">
-      {/* Diff header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-surface-1 flex-shrink-0">
         <span className="text-sm text-white font-mono truncate">{filePath}</span>
         <button
@@ -46,7 +45,6 @@ function DiffViewer({ diff, filePath, onOpenInVscode }: { diff: string; filePath
           Open in VS Code
         </button>
       </div>
-      {/* Diff content */}
       <div className="flex-1 overflow-y-auto">
         <pre className="text-sm font-mono p-4 whitespace-pre-wrap leading-relaxed">
           {diff.split('\n').map((line, i) => (
@@ -67,6 +65,43 @@ function DiffViewer({ diff, filePath, onOpenInVscode }: { diff: string; filePath
           ))}
         </pre>
       </div>
+    </div>
+  )
+}
+
+function FileRow({
+  file,
+  isSelected,
+  actionLabel,
+  actionClass,
+  onAction,
+  onSelect,
+}: {
+  file: FileStatus
+  isSelected: boolean
+  actionLabel: string
+  actionClass: string
+  onAction: () => void
+  onSelect: () => void
+}) {
+  const style = STATUS_STYLE[file.status]
+  return (
+    <div
+      className={`group flex items-center gap-2 px-3 py-1 cursor-pointer border-b border-border transition-colors ${
+        isSelected ? 'bg-surface-3' : 'hover:bg-surface-2'
+      }`}
+      onClick={onSelect}
+    >
+      <span className={`text-sm font-mono font-bold w-5 flex-shrink-0 ${style.class}`}>
+        {style.label}
+      </span>
+      <span className="text-sm text-white font-mono truncate flex-1">{file.path}</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onAction() }}
+        className={`opacity-0 group-hover:opacity-100 text-xs px-2 py-0.5 rounded transition-all ${actionClass}`}
+      >
+        {actionLabel}
+      </button>
     </div>
   )
 }
@@ -94,6 +129,9 @@ export function FilesTab({ task, isActive }: Props) {
     { label: 'Copilot', cmd: 'github-copilot', args: ['-p'] },
   ]
 
+  const stagedFiles = files.filter((f) => f.staged)
+  const changedFiles = files.filter((f) => f.modified)
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (agentMenuRef.current && !agentMenuRef.current.contains(e.target as Node)) {
@@ -108,7 +146,6 @@ export function FilesTab({ task, isActive }: Props) {
     loadFiles()
   }, [task.id])
 
-  // Auto-refresh when this tab becomes active
   useEffect(() => {
     if (isActive) loadFiles()
   }, [isActive])
@@ -136,6 +173,42 @@ export function FilesTab({ task, isActive }: Props) {
       setDiff('')
     } finally {
       setDiffLoading(false)
+    }
+  }
+
+  const handleStage = async (filePath: string) => {
+    try {
+      await api.git.stage(task.worktreePath, filePath)
+      await loadFiles()
+    } catch (err: any) {
+      setAlertMsg({ title: 'Stage Failed', message: err.message || String(err) })
+    }
+  }
+
+  const handleUnstage = async (filePath: string) => {
+    try {
+      await api.git.unstage(task.worktreePath, filePath)
+      await loadFiles()
+    } catch (err: any) {
+      setAlertMsg({ title: 'Unstage Failed', message: err.message || String(err) })
+    }
+  }
+
+  const handleStageAll = async () => {
+    try {
+      await api.git.stageAll(task.worktreePath)
+      await loadFiles()
+    } catch (err: any) {
+      setAlertMsg({ title: 'Stage Failed', message: err.message || String(err) })
+    }
+  }
+
+  const handleUnstageAll = async () => {
+    try {
+      await api.git.unstageAll(task.worktreePath)
+      await loadFiles()
+    } catch (err: any) {
+      setAlertMsg({ title: 'Unstage Failed', message: err.message || String(err) })
     }
   }
 
@@ -187,9 +260,11 @@ export function FilesTab({ task, isActive }: Props) {
         <span className="text-sm text-muted">{files.length} changed file{files.length !== 1 ? 's' : ''}</span>
         <button
           onClick={loadFiles}
-          className="text-sm text-muted hover:text-white transition-colors"
+          className="text-muted hover:text-white transition-colors p-1"
         >
-          Refresh
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clipRule="evenodd" />
+          </svg>
         </button>
       </div>
 
@@ -205,24 +280,67 @@ export function FilesTab({ task, isActive }: Props) {
             <Panel defaultSize={35} minSize={20}>
               <div className="h-full flex flex-col">
                 <div className="flex-1 overflow-y-auto">
-                  {files.map((file) => {
-                    const style = STATUS_STYLE[file.status]
-                    const isSelected = selectedFile === file.path
-                    return (
-                      <div
-                        key={file.path}
-                        className={`flex items-center gap-2 px-3 py-1.5 cursor-pointer border-b border-border transition-colors ${
-                          isSelected ? 'bg-surface-3' : 'hover:bg-surface-2'
-                        }`}
-                        onClick={() => loadDiff(file.path)}
-                      >
-                        <span className={`text-sm font-mono font-bold w-5 flex-shrink-0 ${style.class}`}>
-                          {style.label}
+                  {/* Staged Changes */}
+                  {stagedFiles.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-surface-1/50 sticky top-0">
+                        <span className="text-xs text-muted uppercase tracking-wider">
+                          Staged Changes ({stagedFiles.length})
                         </span>
-                        <span className="text-sm text-white font-mono truncate flex-1">{file.path}</span>
+                        <button
+                          onClick={handleUnstageAll}
+                          className="text-xs text-muted hover:text-error transition-colors"
+                        >
+                          − Unstage all
+                        </button>
                       </div>
-                    )
-                  })}
+                      {stagedFiles.map((file) => (
+                        <FileRow
+                          key={file.path}
+                          file={file}
+                          isSelected={selectedFile === file.path}
+                          actionLabel="−"
+                          actionClass="hover:bg-error/20 hover:text-error text-muted"
+                          onAction={() => handleUnstage(file.path)}
+                          onSelect={() => loadDiff(file.path)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Changes */}
+                  {changedFiles.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-surface-1/50 sticky top-0">
+                        <span className="text-xs text-muted uppercase tracking-wider">
+                          Changes ({changedFiles.length})
+                        </span>
+                        <button
+                          onClick={handleStageAll}
+                          className="text-xs text-muted hover:text-success transition-colors"
+                        >
+                          + Stage all
+                        </button>
+                      </div>
+                      {changedFiles.map((file) => (
+                        <FileRow
+                          key={file.path}
+                          file={file}
+                          isSelected={selectedFile === file.path}
+                          actionLabel="+"
+                          actionClass="hover:bg-success/20 hover:text-success text-muted"
+                          onAction={() => handleStage(file.path)}
+                          onSelect={() => loadDiff(file.path)}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {stagedFiles.length === 0 && changedFiles.length === 0 && (
+                    <div className="flex items-center justify-center h-full text-muted text-sm">
+                      No changes to display
+                    </div>
+                  )}
                 </div>
               </div>
             </Panel>

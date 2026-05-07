@@ -14,6 +14,8 @@ pub struct Commit {
 pub struct FileStatus {
     pub path: String,
     pub status: String,
+    pub staged: bool,
+    pub modified: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -179,6 +181,22 @@ pub fn get_file_diff(worktree_path: &str, file_path: &str) -> anyhow::Result<Str
     Ok(result)
 }
 
+pub fn stage_file(worktree_path: &str, file_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["add", "--", file_path]).map(|_| ())
+}
+
+pub fn unstage_file(worktree_path: &str, file_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["reset", "HEAD", "--", file_path]).map(|_| ())
+}
+
+pub fn stage_all(worktree_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["add", "-A"]).map(|_| ())
+}
+
+pub fn unstage_all(worktree_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["reset", "HEAD"]).map(|_| ())
+}
+
 pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
     let out = Command::new("git")
         .args(["status", "--porcelain"])
@@ -193,19 +211,21 @@ pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
             continue;
         }
         let xy = &line[..2];
+        let x = xy.chars().nth(0).unwrap_or(' ');
+        let y = xy.chars().nth(1).unwrap_or(' ');
         let path = line[3..].trim().to_string();
-        let status = if xy.contains('M') {
-            "M"
-        } else if xy.contains('A') {
-            "A"
-        } else if xy.contains('D') {
-            "D"
-        } else if xy.contains('R') {
-            "R"
+
+        let staged = x != ' ' && x != '?';
+        let modified = y != ' ' || x == '?';
+        let status = if y == 'M' || y == 'A' || y == 'D' || y == 'R' {
+            y.to_string()
+        } else if x == 'M' || x == 'A' || x == 'D' || x == 'R' {
+            x.to_string()
         } else {
-            "?"
+            "?".to_string()
         };
-        files.push(FileStatus { path, status: status.to_string() });
+
+        files.push(FileStatus { path, status, staged, modified });
     }
     Ok(files)
 }

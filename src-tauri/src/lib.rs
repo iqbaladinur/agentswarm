@@ -158,6 +158,26 @@ fn git_diff(worktree_path: String, commit_hash: String) -> Result<String, String
 }
 
 #[tauri::command]
+fn git_stage(worktree_path: String, file_path: String) -> Result<(), String> {
+    git::stage_file(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_unstage(worktree_path: String, file_path: String) -> Result<(), String> {
+    git::unstage_file(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_stage_all(worktree_path: String) -> Result<(), String> {
+    git::stage_all(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_unstage_all(worktree_path: String) -> Result<(), String> {
+    git::unstage_all(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn git_files(worktree_path: String) -> Result<Vec<git::FileStatus>, String> {
     git::get_files(&worktree_path).map_err(|e| e.to_string())
 }
@@ -301,6 +321,10 @@ pub fn run() {
             git_files,
             git_file_diff,
             git_commit,
+            git_stage,
+            git_unstage,
+            git_stage_all,
+            git_unstage_all,
             git_current_branch,
             git_graph,
             git_default_branch,
