@@ -7,8 +7,10 @@ import { WelcomeScreen } from './components/WelcomeScreen'
 import { TitleBar } from './components/TitleBar'
 
 export default function App() {
-  const { repoPath, initialized, init } = useTaskStore()
-  const { activeTaskId } = useUIStore()
+  const repoPath = useTaskStore((s) => s.repoPath)
+  const initialized = useTaskStore((s) => s.initialized)
+  const init = useTaskStore((s) => s.init)
+  const activeTaskId = useUIStore((s) => s.activeTaskId)
 
   useEffect(() => {
     init()

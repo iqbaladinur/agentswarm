@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 type TabType = 'terminal' | 'git' | 'files'
 
@@ -10,7 +10,7 @@ interface UIStore {
   activeTaskId: string | null
   // Active sub-tab per task
   activeTab: Record<string, TabType>
-  // Agent command to auto-run in the first terminal
+  // Default agent command for new task terminals
   agentCmd: string
 
   openTask: (taskId: string) => void
@@ -18,6 +18,20 @@ interface UIStore {
   setActiveTask: (taskId: string) => void
   setTab: (taskId: string, tab: TabType) => void
   setAgentCmd: (cmd: string) => void
+  /** Register PTY cleanup callback — called when a task tab is closed */
+  setPtyCleanup: (fn: ((taskId: string) => void) | null) => void
+  _ptyCleanup: ((taskId: string) => void) | null
+}
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+const debouncedStorage = {
+  getItem: (name: string) => localStorage.getItem(name),
+  setItem: (name: string, value: string) => {
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = setTimeout(() => localStorage.setItem(name, value), 300)
+  },
+  removeItem: (name: string) => localStorage.removeItem(name),
 }
 
 export const useUIStore = create<UIStore>()(
@@ -27,15 +41,14 @@ export const useUIStore = create<UIStore>()(
       activeTaskId: null,
       activeTab: {},
       agentCmd: 'claude',
+      _ptyCleanup: null,
 
       openTask: (taskId) => {
         const { openTaskIds } = get()
         if (openTaskIds.includes(taskId)) {
-          // Already open — just switch to it
           set({ activeTaskId: taskId })
           return
         }
-        // Add to tab list and make active
         set({
           openTaskIds: [...openTaskIds, taskId],
           activeTaskId: taskId,
@@ -44,9 +57,11 @@ export const useUIStore = create<UIStore>()(
       },
 
       closeTask: (taskId) => {
+        const cleanup = get()._ptyCleanup
+        if (cleanup) cleanup(taskId)
+
         const { openTaskIds, activeTaskId } = get()
         const next = openTaskIds.filter((id) => id !== taskId)
-        // If we closed the active tab, pick the last remaining
         const newActive = activeTaskId === taskId
           ? (next[next.length - 1] ?? null)
           : activeTaskId
@@ -60,7 +75,19 @@ export const useUIStore = create<UIStore>()(
       },
 
       setAgentCmd: (cmd) => set({ agentCmd: cmd }),
+
+      setPtyCleanup: (fn) => set({ _ptyCleanup: fn }),
     }),
-    { name: 'agentswarm-ui' },
+    {
+      name: 'agentswarm-ui',
+      storage: createJSONStorage(() => debouncedStorage),
+      partialize: (state) =>
+        ({
+          openTaskIds: state.openTaskIds,
+          activeTaskId: state.activeTaskId,
+          activeTab: state.activeTab,
+          agentCmd: state.agentCmd,
+        } as UIStore),
+    },
   ),
 )

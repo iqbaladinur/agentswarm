@@ -11,18 +11,54 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #0d0d0d;
-  color: #e5e5e5;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0a0a0b;
+  color: #e4e4ed;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgba(139,124,247,0.3);
+  color: #e4e4ed;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(139,124,247,0.5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3e3e3e; }
+::-webkit-scrollbar-thumb { background: #2e2e36; border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #3e3e4a; background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* xterm overrides */
 .xterm { height: 100%; }
 .xterm-viewport { overflow-y: auto !important; }
+
+/* Panel transition — smooth tab switching */
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: scale(0.998); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.panel-enter {
+  animation: panelFadeIn 0.12s ease-out;
+}
+
+/* Dropdown menu animation */
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dropdown-enter {
+  animation: dropdownIn 0.12s ease-out;
+  transform-origin: top center;
+}

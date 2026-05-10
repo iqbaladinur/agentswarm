@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { useTaskStore } from '../../store/taskStore'
 import { useUIStore } from '../../store/uiStore'
 
@@ -6,17 +6,17 @@ interface Props {
   onDone: () => void
 }
 
-export function NewTaskInput({ onDone }: Props) {
+export const NewTaskInput = memo(function NewTaskInput({ onDone }: Props) {
   const [value, setValue] = useState('')
-  const { createTask } = useTaskStore()
-  const { openTask } = useUIStore()
+  const createTask = useTaskStore((s) => s.createTask)
+  const openTask = useUIStore((s) => s.openTask)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
     const name = value.trim()
     if (!name) { onDone(); return }
     try {
@@ -26,10 +26,10 @@ export function NewTaskInput({ onDone }: Props) {
       console.error(err)
     }
     onDone()
-  }
+  }, [value, createTask, openTask, onDone])
 
   return (
-    <div className="px-3 py-1">
+    <div className="animate-fade-in-up px-3.5 py-2">
       <input
         ref={inputRef}
         value={value}
@@ -39,9 +39,9 @@ export function NewTaskInput({ onDone }: Props) {
           if (e.key === 'Escape') onDone()
         }}
         onBlur={submit}
-        placeholder="Task name..."
-        className="w-full bg-surface-3 text-white text-sm px-2 py-1.5 rounded border border-border focus:border-accent outline-none"
+        placeholder="Task name…"
+        className="w-full bg-surface-2 text-text-primary text-[13px] px-3 py-2 rounded-lg border border-border focus:border-accent focus:ring-1 focus:ring-accent/30 outline-none placeholder:text-muted-dim transition-all duration-100"
       />
     </div>
   )
-}
+})
