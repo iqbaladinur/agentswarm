@@ -45,13 +45,15 @@ fn create_task(
     state: State<'_, AppState>,
     repo_path: String,
     name: String,
+    base_branch: Option<String>,
 ) -> Result<db::Task, String> {
     let id = Uuid::new_v4().to_string();
     let slug = name.to_lowercase().replace(' ', "-");
     let branch = format!("task/{}-{}", slug, &id[..6]);
     let worktree_path = format!("{}/.worktrees/{}", repo_path, id);
 
-    git::create_worktree(&repo_path, &branch, &worktree_path).map_err(|e| e.to_string())?;
+    git::create_worktree(&repo_path, &branch, &worktree_path, base_branch.as_deref())
+        .map_err(|e| e.to_string())?;
 
     state
         .db
@@ -178,7 +180,17 @@ fn git_merge(
     .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn git_delete_branch(repo_path: String, branch: String) -> Result<(), String> {
+    git::delete_branch(&repo_path, &branch).map_err(|e| e.to_string())
+}
+
 // ── Shell / FS ────────────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn list_branches(repo_path: String) -> Vec<String> {
+    git::list_branches(&repo_path)
+}
 
 #[tauri::command]
 fn open_vscode(worktree_path: String) -> Result<(), String> {
@@ -278,6 +290,8 @@ pub fn run() {
             git_graph,
             git_default_branch,
             git_merge,
+            git_delete_branch,
+            list_branches,
             open_vscode,
             dialog_open_folder,
             fs_browse,

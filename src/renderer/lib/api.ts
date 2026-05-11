@@ -13,8 +13,8 @@ export const api = {
   },
   task: {
     list: (repoPath: string) => invoke<Task[]>('list_tasks', { repoPath }),
-    create: (repoPath: string, name: string) =>
-      invoke<Task>('create_task', { repoPath, name }),
+    create: (repoPath: string, name: string, baseBranch?: string) =>
+      invoke<Task>('create_task', { repoPath, name, baseBranch }),
     delete: (taskId: string) => invoke<void>('delete_task', { taskId }),
     updateStatus: (taskId: string, status: string) =>
       invoke<void>('update_task_status', { taskId, status }),
@@ -31,8 +31,11 @@ export const api = {
     currentBranch: (worktreePath: string) => invoke<string>('git_current_branch', { worktreePath }),
     graph: (worktreePath: string) => invoke<GraphLine[]>('git_graph', { worktreePath }),
     defaultBranch: (repoPath: string) => invoke<string>('git_default_branch', { repoPath }),
+    listBranches: (repoPath: string) => invoke<string[]>('list_branches', { repoPath }),
     merge: (repoPath: string, worktreePath: string, branch: string, targetBranch?: string) =>
       invoke<void>('git_merge', { repoPath, worktreePath, branch, targetBranch }),
+    deleteBranch: (repoPath: string, branch: string) =>
+      invoke<void>('git_delete_branch', { repoPath, branch }),
   },
   shell: {
     openVscode: (worktreePath: string) => invoke<void>('open_vscode', { worktreePath }),

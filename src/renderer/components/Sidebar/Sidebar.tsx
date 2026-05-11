@@ -43,7 +43,7 @@ export const Sidebar = memo(function Sidebar() {
   }, [openRepo])
 
   return (
-    <div className="flex flex-col w-56 min-w-56 border-r border-border-soft bg-surface-1 h-full">
+    <div className="flex flex-col w-72 min-w-72 border-r border-border-soft bg-surface-1 h-full">
       {showPicker && (
         <FolderPicker
           onSelect={(p) => { setShowPicker(false); setShowRepoMenu(false); handlePickerSelect(p) }}

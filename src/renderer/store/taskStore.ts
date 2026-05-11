@@ -18,7 +18,7 @@ interface TaskStore {
   closeRepo: () => void
   removeRepo: (path: string) => Promise<void>
   loadTasks: () => Promise<void>
-  createTask: (name: string) => Promise<Task>
+  createTask: (name: string, baseBranch?: string) => Promise<Task>
   deleteTask: (taskId: string) => Promise<void>
   updateTaskStatus: (taskId: string, status: Task['status']) => void
   getCachedTask: (taskId: string) => Task | undefined
@@ -91,10 +91,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     set({ tasks, taskCache })
   },
 
-  createTask: async (name) => {
+  createTask: async (name, baseBranch) => {
     const { repoPath, tasks, taskCache } = get()
     if (!repoPath) throw new Error('No repo open')
-    const task = await api.task.create(repoPath, name)
+    const task = await api.task.create(repoPath, name, baseBranch)
     set({ tasks: [task, ...tasks], taskCache: { ...taskCache, [task.id]: task } })
     return task
   },

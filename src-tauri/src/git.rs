@@ -52,7 +52,7 @@ pub fn get_main_branch(repo_path: &str) -> anyhow::Result<String> {
     git(repo_path, &["symbolic-ref", "--short", "HEAD"])
 }
 
-pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> anyhow::Result<()> {
+pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str, base_branch: Option<&str>) -> anyhow::Result<()> {
     if let Some(parent) = std::path::Path::new(worktree_path).parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -76,6 +76,13 @@ pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> an
         .stderr(Stdio::null())
         .status()
         .map_err(|e| anyhow::anyhow!("failed to clone repo: {}", e))?;
+
+    // If a base branch is specified, check it out first
+    if let Some(base) = base_branch {
+        if !base.is_empty() {
+            let _ = git(worktree_path, &["checkout", base]);
+        }
+    }
 
     // Checkout task branch
     git(worktree_path, &["checkout", "-b", branch])?;
@@ -338,6 +345,20 @@ pub fn detect_default_branch(repo_path: &str) -> String {
     "main".to_string()
 }
 
+pub fn list_branches(repo_path: &str) -> Vec<String> {
+    let out = Command::new("git")
+        .args(["branch", "-a", "--format=%(refname:short)"])
+        .current_dir(repo_path)
+        .output()
+        .unwrap_or_else(|_| std::process::Output { status: Default::default(), stdout: vec![], stderr: vec![] });
+
+    let text = String::from_utf8_lossy(&out.stdout);
+    text.lines()
+        .map(|l| l.trim().to_string())
+        .filter(|b| !b.is_empty() && !b.starts_with("origin/"))
+        .collect()
+}
+
 pub fn merge_to_main(
     repo_path: &str,
     worktree_path: &str,
@@ -375,5 +396,13 @@ pub fn merge_to_main(
         return Err(anyhow::anyhow!("{}", stderr.trim()));
     }
 
+    // Delete the merged task branch
+    let _ = git(repo_path, &["branch", "-d", branch]);
+
+    Ok(())
+}
+
+pub fn delete_branch(repo_path: &str, branch: &str) -> anyhow::Result<()> {
+    git(repo_path, &["branch", "-D", branch]).ok();
     Ok(())
 }
