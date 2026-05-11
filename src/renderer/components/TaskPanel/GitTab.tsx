@@ -2,6 +2,7 @@ import { useEffect, useState, memo, useCallback, useMemo } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
+import { useTaskStore } from '../../store/taskStore'
 import { parseGraph, maxGraphColumns } from '../../lib/graphParser'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AlertDialog } from '../AlertDialog'
@@ -31,6 +32,8 @@ export const GitTab = memo(function GitTab({ task }: Props) {
   const [merging, setMerging] = useState(false)
   const [confirmMerge, setConfirmMerge] = useState(false)
   const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
+
+  const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
 
   // ── SVG graph layout ────────────────────────────────────────────
   const LANE_W = 14
@@ -82,6 +85,7 @@ export const GitTab = memo(function GitTab({ task }: Props) {
     try {
       await api.git.merge(task.repoPath, task.worktreePath, task.branch, targetBranch)
       setAlertMsg({ title: 'Merge Successful', message: `"${task.branch}" merged to ${targetBranch}` })
+      updateTaskStatus(task.id, 'done')
       loadAll()
     } catch (err: any) {
       setAlertMsg({ title: 'Merge Failed', message: err.message })

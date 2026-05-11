@@ -45,6 +45,14 @@ export const TerminalTab = memo(function TerminalTab({ task, isActive }: Props) 
     }
   }, [task.id])
 
+  // Detect terminal errors → mark task as failed
+  const firstError = terminals[0]?.error
+  useEffect(() => {
+    if (firstError) {
+      updateTaskStatus(task.id, 'failed')
+    }
+  }, [firstError, task.id, updateTaskStatus])
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
