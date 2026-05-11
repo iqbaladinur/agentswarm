@@ -49,6 +49,27 @@ pub fn is_git_repo(path: &str) -> bool {
         .unwrap_or(false)
 }
 
+pub fn init_repo(path: &str) -> anyhow::Result<()> {
+    Command::new("git")
+        .args(["init"])
+        .current_dir(path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("failed to run git init: {}", e))
+        .and_then(|o| {
+            if o.status.success() {
+                // Set default branch to main
+                let _ = Command::new("git")
+                    .args(["checkout", "-b", "main"])
+                    .current_dir(path)
+                    .output();
+                Ok(())
+            } else {
+                let stderr = String::from_utf8_lossy(&o.stderr);
+                Err(anyhow::anyhow!("{}", stderr.trim()))
+            }
+        })
+}
+
 #[allow(dead_code)]
 pub fn get_main_branch(repo_path: &str) -> anyhow::Result<String> {
     git(repo_path, &["symbolic-ref", "--short", "HEAD"])

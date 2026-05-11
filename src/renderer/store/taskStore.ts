@@ -14,6 +14,7 @@ interface TaskStore {
 
   init: () => Promise<void>
   openRepo: (path: string) => Promise<void>
+  initRepo: (path: string) => Promise<void>
   switchRepo: (path: string) => Promise<void>
   closeRepo: () => void
   removeRepo: (path: string) => Promise<void>
@@ -47,6 +48,16 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   openRepo: async (path) => {
     const { valid } = await api.repo.validate(path)
     if (!valid) throw new Error('Not a git repository')
+    await api.repo.touch(path)
+    const repos = await api.repo.list()
+    const tasks = await api.task.list(path)
+    const taskCache = { ...get().taskCache }
+    for (const t of tasks) taskCache[t.id] = t
+    set({ repos, repoPath: path, tasks, taskCache })
+  },
+
+  initRepo: async (path) => {
+    await api.repo.init(path)
     await api.repo.touch(path)
     const repos = await api.repo.list()
     const tasks = await api.task.list(path)

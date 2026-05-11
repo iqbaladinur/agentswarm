@@ -4,13 +4,17 @@ import { FolderPicker } from './FolderPicker'
 
 export const WelcomeScreen = memo(function WelcomeScreen() {
   const openRepo = useTaskStore((s) => s.openRepo)
+  const initRepo = useTaskStore((s) => s.initRepo)
   const [input, setInput] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [initLoading, setInitLoading] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
+  const [lastPath, setLastPath] = useState('')
 
   const handleOpen = useCallback(async (path: string) => {
     if (!path.trim()) return
+    setLastPath(path.trim())
     setLoading(true)
     setError('')
     try {
@@ -21,6 +25,21 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
       setLoading(false)
     }
   }, [openRepo])
+
+  const handleInit = useCallback(async () => {
+    if (!lastPath) return
+    setInitLoading(true)
+    setError('')
+    try {
+      await initRepo(lastPath)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setInitLoading(false)
+    }
+  }, [lastPath, initRepo])
+
+  const showInit = error === 'Not a git repository' && !!lastPath
 
   return (
     <div className="flex h-full w-full items-center justify-center bg-surface-0">
@@ -62,11 +81,26 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
             </button>
           </div>
           {error && (
-            <div className="flex items-center gap-2 text-error text-[13px] text-left px-1">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>
-              </svg>
-              {error}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-error text-[13px] text-left px-1">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>
+                </svg>
+                {error}
+              </div>
+              {showInit && (
+                <button
+                  onClick={handleInit}
+                  disabled={initLoading}
+                  className="w-full h-10 text-[13px] bg-surface-2 text-text-secondary hover:text-text-primary border border-dashed border-border rounded-lg transition-all duration-100 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+                >
+                  {initLoading ? (
+                    <><svg className="animate-spin w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="40" strokeDashoffset="10" strokeLinecap="round"/></svg>Initializing…</>
+                  ) : (
+                    <><svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>Initialize git repository</>
+                  )}
+                </button>
+              )}
             </div>
           )}
           <button

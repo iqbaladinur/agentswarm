@@ -33,6 +33,11 @@ fn validate_repo(repo_path: String) -> bool {
     git::is_git_repo(&repo_path)
 }
 
+#[tauri::command]
+fn init_repo(repo_path: String) -> Result<(), String> {
+    git::init_repo(&repo_path).map_err(|e| e.to_string())
+}
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -312,6 +317,7 @@ pub fn run() {
             touch_repo,
             delete_repo,
             validate_repo,
+            init_repo,
             list_tasks,
             create_task,
             update_task_status,

@@ -10,6 +10,7 @@ export const api = {
     delete: (repoPath: string) => invoke<void>('delete_repo', { repoPath }),
     validate: (repoPath: string) =>
       invoke<boolean>('validate_repo', { repoPath }).then((valid) => ({ valid })),
+    init: (repoPath: string) => invoke<void>('init_repo', { repoPath }),
   },
   task: {
     list: (repoPath: string) => invoke<Task[]>('list_tasks', { repoPath }),
