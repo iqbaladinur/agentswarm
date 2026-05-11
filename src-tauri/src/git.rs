@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -199,11 +200,13 @@ pub fn get_current_branch(worktree_path: &str) -> String {
 }
 
 pub fn get_graph(worktree_path: &str) -> anyhow::Result<Vec<GraphLine>> {
-    let raw = Command::new("git")
+    // ── Pass 1: graph structure + short hash + message + refs (--oneline preserves / and \ chars) ──
+    let graph_raw = Command::new("git")
         .args([
             "log",
             "--graph",
-            "--format=%x00%H%x00%h%x00%s%x00%an%x00%ai%x00%D",
+            "--oneline",
+            "--decorate",
             "-30",
             "--all",
         ])
@@ -212,27 +215,101 @@ pub fn get_graph(worktree_path: &str) -> anyhow::Result<Vec<GraphLine>> {
         .map_err(|e| anyhow::anyhow!("git log --graph failed: {}", e))?
         .stdout;
 
-    let text = String::from_utf8_lossy(&raw);
+    // ── Pass 2: author + date + full hash lookup by short hash ──
+    let author_raw = Command::new("git")
+        .args([
+            "log",
+            "--all",
+            "-30",
+            "--format=@@%H@@%h@@%an@@%ai",
+        ])
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("git log author lookup failed: {}", e))?
+        .stdout;
+
+    // Build lookup: short_hash → (full_hash, author, date)
+    let mut meta: HashMap<String, (String, String, String)> = HashMap::new();
+    for line in String::from_utf8_lossy(&author_raw).lines() {
+        let parts: Vec<&str> = line.split("@@").collect();
+        if parts.len() >= 5 {
+            meta.insert(
+                parts[2].to_string(),              // short hash
+                (parts[1].to_string(), parts[3].to_string(), parts[4].to_string()), // full, author, date
+            );
+        }
+    }
+
+    let text = String::from_utf8_lossy(&graph_raw);
     let mut lines = Vec::new();
 
     for line in text.lines() {
-        // Split at \x00 — left is graph prefix, right is structured data
-        if let Some(null_pos) = line.find('\x00') {
-            let prefix = line[..null_pos].to_string();
-            let data = &line[null_pos + 1..];
-            let parts: Vec<&str> = data.splitn(6, '\x00').collect();
-            if parts.len() >= 5 {
-                lines.push(GraphLine {
-                    prefix,
-                    hash: parts[0].to_string(),
-                    short_hash: parts[1].to_string(),
-                    message: parts[2].to_string(),
-                    author: parts[3].to_string(),
-                    date: parts[4].to_string(),
-                    refs: parts.get(5).unwrap_or(&"").to_string(),
-                });
+        let trimmed = line.trim_end();
+        if trimmed.is_empty() { continue; }
+
+        // Find the boundary between graph prefix and commit data.
+        // Graph chars: *, |, /, \, space. Commit data starts at first alphanumeric.
+        let mut prefix_end = trimmed.len();
+        for (i, ch) in trimmed.char_indices() {
+            if ch.is_ascii_alphanumeric() {
+                prefix_end = i;
+                break;
             }
         }
+
+        let is_graph_only = prefix_end == trimmed.len();
+
+        if is_graph_only {
+            // Pure graph line (e.g. "|/  " or "|\  "), no commit data attached
+            lines.push(GraphLine {
+                prefix: trimmed.to_string(),
+                hash: String::new(),
+                short_hash: String::new(),
+                message: String::new(),
+                author: String::new(),
+                date: String::new(),
+                refs: String::new(),
+            });
+            continue;
+        }
+
+        let prefix = trimmed[..prefix_end].to_string();
+        let rest = trimmed[prefix_end..].trim();
+
+        // Parse oneline: "<hash> (<refs>) <message>" or "<hash> <message>"
+        let hash_end = rest.find(' ').unwrap_or(rest.len());
+        let short_hash = rest[..hash_end].to_string();
+        let tail = rest[hash_end..].trim();
+
+        let mut refs = String::new();
+        let message = if tail.starts_with('(') {
+            if let Some(close) = tail.find(") ") {
+                refs = tail[1..close].to_string();
+                tail[close + 2..].to_string()
+            } else if tail.ends_with(')') {
+                refs = tail[1..tail.len() - 1].to_string();
+                String::new()
+            } else {
+                tail.to_string()
+            }
+        } else {
+            tail.to_string()
+        };
+
+        let (full_hash, author, date) = meta
+            .get(&short_hash)
+            .cloned()
+            .unwrap_or_else(|| (short_hash.clone(), String::new(), String::new()));
+
+        lines.push(GraphLine {
+            prefix,
+            hash: full_hash,
+            short_hash,
+            message,
+            author,
+            date,
+            refs,
+        });
     }
 
     Ok(lines)

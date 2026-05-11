@@ -1,7 +1,8 @@
-import { useEffect, useState, memo, useCallback } from 'react'
+import { useEffect, useState, memo, useCallback, useMemo } from 'react'
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
+import { parseGraph, maxGraphColumns } from '../../lib/graphParser'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AlertDialog } from '../AlertDialog'
 
@@ -30,6 +31,19 @@ export const GitTab = memo(function GitTab({ task }: Props) {
   const [merging, setMerging] = useState(false)
   const [confirmMerge, setConfirmMerge] = useState(false)
   const [alertMsg, setAlertMsg] = useState<{ title: string; message: string } | null>(null)
+
+  // ── SVG graph layout ────────────────────────────────────────────
+  const LANE_W = 14
+  const GUTTER = 10
+  const ROW_H = 38
+  const DOT_R = 3
+  const DOT_R_SEL = 5.5
+
+  const parsedRows = useMemo(() => parseGraph(lines), [lines])
+  const graphCols = useMemo(() => Math.max(maxGraphColumns(lines), 1), [lines])
+  const graphWidth = graphCols * LANE_W + LANE_W + GUTTER + 12
+  const x = (col: number) => GUTTER + col * LANE_W + LANE_W / 2
+  const midY = ROW_H / 2
 
   const loadAll = useCallback(async () => {
     setLoading(true)
@@ -111,29 +125,134 @@ export const GitTab = memo(function GitTab({ task }: Props) {
                 <p className="text-muted-dim text-[13px]">No commits yet</p>
               </div>
             ) : (
-              <div className="font-mono text-[13px]">
-                {lines.map((line) => {
-                  const isSelected = selectedHash === line.hash
+              <div className="font-mono text-[13px] relative" style={{ minHeight: parsedRows.length * ROW_H }}>
+                {/* Single SVG overlay — z-0, spans all rows so lines connect seamlessly */}
+                <svg
+                  className="absolute top-0 left-0 z-0 pointer-events-none"
+                  style={{ width: graphWidth }}
+                  height={parsedRows.length * ROW_H}
+                  viewBox={`0 0 ${graphWidth} ${parsedRows.length * ROW_H}`}
+                  shapeRendering="geometricPrecision"
+                >
+                  {parsedRows.map((row, ri) => {
+                    const isSelected = selectedHash === row.commit.hash
+                    const rowTop = ri * ROW_H
+                    const rowBottom = (ri + 1) * ROW_H
+                    return (
+                      <g key={ri}>
+                        {/* Lines */}
+                        {row.segments.map((seg, si) => {
+                          if (seg.type === 'dot') return null
+                          const cx = x(seg.col)
+                          if (seg.type === 'vline') {
+                            return (
+                              <line
+                                key={si}
+                                x1={cx} y1={rowTop}
+                                x2={cx} y2={rowBottom}
+                                stroke={seg.color}
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                              />
+                            )
+                          }
+                          if (seg.type === 'upleft') {
+                            const cx = x(seg.col)
+                            const xFrom = cx + LANE_W
+                            const xTo = cx - LANE_W
+                            return (
+                              <path
+                                key={si}
+                                d={`M ${xFrom} ${rowTop} C ${xFrom} ${rowTop + ROW_H * 0.45} ${xTo} ${rowTop + ROW_H * 0.55} ${xTo} ${rowBottom}`}
+                                stroke={seg.color}
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                fill="none"
+                              />
+                            )
+                          }
+                          if (seg.type === 'upright') {
+                            const cx = x(seg.col)
+                            const xFrom = cx - LANE_W
+                            const xTo = cx + LANE_W
+                            return (
+                              <path
+                                key={si}
+                                d={`M ${xFrom} ${rowTop} C ${xFrom} ${rowTop + ROW_H * 0.45} ${xTo} ${rowTop + ROW_H * 0.55} ${xTo} ${rowBottom}`}
+                                stroke={seg.color}
+                                strokeWidth={1.5}
+                                strokeLinecap="round"
+                                fill="none"
+                              />
+                            )
+                          }
+                          return null
+                        })}
+                        {/* Dots — drawn on top of lines */}
+                        {row.segments.map((seg, si) => {
+                          if (seg.type !== 'dot') return null
+                          const r = isSelected ? DOT_R_SEL : DOT_R
+                          return (
+                            <circle
+                              key={`dot-${si}`}
+                              cx={x(seg.col)}
+                              cy={rowTop + midY}
+                              r={r}
+                              fill={seg.color}
+                              stroke={seg.color}
+                              strokeWidth={1.5}
+                              filter={isSelected ? `drop-shadow(0 0 5px ${seg.color})` : undefined}
+                            />
+                          )
+                        })}
+                      </g>
+                    )
+                  })}
+                </svg>
+
+                {/* Commit text rows — z-10 sits above SVG; graph column is transparent so lines show through */}
+                {parsedRows.map((row) => {
+                  const hasCommit = row.commit.hash !== ''
+                  const isSelected = hasCommit && selectedHash === row.commit.hash
+                  // Per-row graph column width — tight to this row's actual content
+                  const maxSegCol = row.segments.reduce((m, s) => {
+                    const r = s.type === 'upleft' || s.type === 'upright' ? s.col + 1 : s.col
+                    return r > m ? r : m
+                  }, 0)
+                  const rowGraphW = x(maxSegCol) + LANE_W + 4
                   return (
                     <div
-                      key={line.hash + line.prefix}
-                      onClick={() => selectCommit(line.hash)}
-                      className={`flex cursor-pointer transition-all duration-75 ${
-                        isSelected ? 'bg-accent-bg border-l-[3px] border-l-accent' : 'hover:bg-surface-2/30 border-l-[3px] border-l-transparent'
-                      }`}
+                      key={(row.commit.hash || 'g') + row.commit.prefix}
+                      onClick={() => hasCommit && selectCommit(row.commit.hash)}
+                      className="flex items-center z-10"
+                      style={{ height: ROW_H }}
                     >
-                      <span className="text-muted-dim/60 whitespace-pre py-1.5 pl-4 leading-snug select-none">
-                        {line.prefix}
-                      </span>
-                      <span className="flex-1 min-w-0 py-1.5 pr-3 leading-snug">
-                        <span className="text-text-primary truncate block font-medium">{line.message}</span>
-                        <div className="flex items-center gap-3 text-[11px] mt-0.5">
-                          <span className="text-muted-dim">{line.author}</span>
-                          {line.refs && (
-                            <span className="text-accent bg-accent-bg px-1.5 py-px rounded-md font-medium">{line.refs}</span>
-                          )}
-                        </div>
-                      </span>
+                      {/* Transparent graph column — SVG lines show through */}
+                      <div style={{ width: rowGraphW, height: ROW_H }} className="flex-shrink-0" />
+
+                      {/* Text area — solid bg blocks SVG lines behind it */}
+                      <div
+                        className={`flex items-center flex-1 min-w-0 h-full pr-3 transition-all duration-75 ${
+                          isSelected ? 'bg-accent-bg border-l-[3px] border-l-accent'
+                          : hasCommit ? 'bg-surface-0 hover:bg-surface-2/30 border-l-[3px] border-l-transparent cursor-pointer'
+                          : 'bg-surface-0 border-l-[3px] border-l-transparent'
+                        }`}
+                      >
+                        {hasCommit ? (
+                          <>
+                            <span className="text-[13px] text-text-primary truncate font-medium">{row.commit.message}</span>
+                            <span className="text-[11px] text-muted-dim ml-2 flex-shrink-0">{row.commit.author}</span>
+                            <span className="flex-1 min-w-[8px]" />
+                            {row.commit.refs && (
+                              <span className="text-[11px] text-accent bg-accent-bg px-1.5 py-px rounded-md font-medium max-w-[40%] truncate flex-shrink-0">
+                                {row.commit.refs}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="flex-1" />
+                        )}
+                      </div>
                     </div>
                   )
                 })}
