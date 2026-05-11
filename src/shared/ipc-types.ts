@@ -35,6 +35,8 @@ export interface GraphLine {
 export interface FileStatus {
   path: string
   status: 'M' | 'A' | 'D' | '?' | 'R'
+  staged: boolean
+  modified: boolean
 }
 
 export interface DiffResult {

@@ -45,19 +45,23 @@ fn create_task(
     state: State<'_, AppState>,
     repo_path: String,
     name: String,
-    base_branch: Option<String>,
+    branch: Option<String>,
 ) -> Result<db::Task, String> {
     let id = Uuid::new_v4().to_string();
-    let slug = name.to_lowercase().replace(' ', "-");
-    let branch = format!("task/{}-{}", slug, &id[..6]);
+    let (branch_name, new_branch) = if let Some(b) = branch {
+        (b, false)
+    } else {
+        let slug = name.to_lowercase().replace(' ', "-");
+        (format!("task/{}-{}", slug, &id[..6]), true)
+    };
     let worktree_path = format!("{}/.worktrees/{}", repo_path, id);
 
-    git::create_worktree(&repo_path, &branch, &worktree_path, base_branch.as_deref())
+    git::create_worktree(&repo_path, &branch_name, &worktree_path, new_branch)
         .map_err(|e| e.to_string())?;
 
     state
         .db
-        .create_task(&id, &repo_path, &name, &branch, &worktree_path)
+        .create_task(&id, &repo_path, &name, &branch_name, &worktree_path)
         .map_err(|e| e.to_string())
 }
 
@@ -140,8 +144,33 @@ fn git_files(worktree_path: String) -> Result<Vec<git::FileStatus>, String> {
 }
 
 #[tauri::command]
+fn git_stage(worktree_path: String, file_path: String) -> Result<(), String> {
+    git::stage_file(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_unstage(worktree_path: String, file_path: String) -> Result<(), String> {
+    git::unstage_file(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_stage_all(worktree_path: String) -> Result<(), String> {
+    git::stage_all(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_unstage_all(worktree_path: String) -> Result<(), String> {
+    git::unstage_all(&worktree_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn git_file_diff(worktree_path: String, file_path: String) -> Result<String, String> {
     git::get_file_diff(&worktree_path, &file_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn git_commit(worktree_path: String, message: String) -> Result<(), String> {
+    git::commit_worktree(&worktree_path, &message).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -160,8 +189,17 @@ fn git_default_branch(repo_path: String) -> String {
 }
 
 #[tauri::command]
-fn git_commit(worktree_path: String, message: String) -> Result<(), String> {
-    git::commit_worktree(&worktree_path, &message).map_err(|e| e.to_string())
+async fn generate_commit_message(
+    worktree_path: String,
+    agent_cmd: String,
+    agent_args: Vec<String>,
+) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        git::generate_commit_message(&worktree_path, &agent_cmd, &agent_args)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -285,10 +323,15 @@ pub fn run() {
             git_diff,
             git_files,
             git_file_diff,
+            git_stage,
+            git_unstage,
+            git_stage_all,
+            git_unstage_all,
             git_commit,
             git_current_branch,
             git_graph,
             git_default_branch,
+            generate_commit_message,
             git_merge,
             git_delete_branch,
             list_branches,

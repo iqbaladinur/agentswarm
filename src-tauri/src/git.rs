@@ -15,6 +15,8 @@ pub struct Commit {
 pub struct FileStatus {
     pub path: String,
     pub status: String,
+    pub staged: bool,
+    pub modified: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -52,7 +54,7 @@ pub fn get_main_branch(repo_path: &str) -> anyhow::Result<String> {
     git(repo_path, &["symbolic-ref", "--short", "HEAD"])
 }
 
-pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str, base_branch: Option<&str>) -> anyhow::Result<()> {
+pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str, new_branch: bool) -> anyhow::Result<()> {
     if let Some(parent) = std::path::Path::new(worktree_path).parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -77,15 +79,11 @@ pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str, base_
         .status()
         .map_err(|e| anyhow::anyhow!("failed to clone repo: {}", e))?;
 
-    // If a base branch is specified, check it out first
-    if let Some(base) = base_branch {
-        if !base.is_empty() {
-            let _ = git(worktree_path, &["checkout", base]);
-        }
+    if new_branch {
+        git(worktree_path, &["checkout", "-b", branch])?;
+    } else {
+        git(worktree_path, &["checkout", branch])?;
     }
-
-    // Checkout task branch
-    git(worktree_path, &["checkout", "-b", branch])?;
     Ok(())
 }
 
@@ -165,6 +163,22 @@ pub fn get_file_diff(worktree_path: &str, file_path: &str) -> anyhow::Result<Str
     Ok(result)
 }
 
+pub fn stage_file(worktree_path: &str, file_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["add", "--", file_path]).map(|_| ())
+}
+
+pub fn unstage_file(worktree_path: &str, file_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["reset", "HEAD", "--", file_path]).map(|_| ())
+}
+
+pub fn stage_all(worktree_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["add", "-A"]).map(|_| ())
+}
+
+pub fn unstage_all(worktree_path: &str) -> anyhow::Result<()> {
+    git(worktree_path, &["reset", "HEAD"]).map(|_| ())
+}
+
 pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
     let out = Command::new("git")
         .args(["status", "--porcelain"])
@@ -179,19 +193,21 @@ pub fn get_files(worktree_path: &str) -> anyhow::Result<Vec<FileStatus>> {
             continue;
         }
         let xy = &line[..2];
+        let x = xy.chars().nth(0).unwrap_or(' ');
+        let y = xy.chars().nth(1).unwrap_or(' ');
         let path = line[3..].trim().to_string();
-        let status = if xy.contains('M') {
-            "M"
-        } else if xy.contains('A') {
-            "A"
-        } else if xy.contains('D') {
-            "D"
-        } else if xy.contains('R') {
-            "R"
+
+        let staged = x != ' ' && x != '?';
+        let modified = y != ' ' || x == '?';
+        let status = if y == 'M' || y == 'A' || y == 'D' || y == 'R' {
+            y.to_string()
+        } else if x == 'M' || x == 'A' || x == 'D' || x == 'R' {
+            x.to_string()
         } else {
-            "?"
+            "?".to_string()
         };
-        files.push(FileStatus { path, status: status.to_string() });
+
+        files.push(FileStatus { path, status, staged, modified });
     }
     Ok(files)
 }
@@ -357,6 +373,74 @@ pub fn list_branches(repo_path: &str) -> Vec<String> {
         .map(|l| l.trim().to_string())
         .filter(|b| !b.is_empty() && !b.starts_with("origin/"))
         .collect()
+}
+
+pub fn generate_commit_message(worktree_path: &str, agent_cmd: &str, agent_args: &[String]) -> anyhow::Result<String> {
+    let diff = Command::new("git")
+        .args(["diff", "--cached"])
+        .current_dir(worktree_path)
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+        .unwrap_or_default();
+
+    let staged_empty = diff.trim().is_empty();
+
+    let (context, prefix) = if staged_empty {
+        // No staged changes — show unstaged diff or status
+        let unstaged = Command::new("git")
+            .args(["diff"])
+            .current_dir(worktree_path)
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+            .unwrap_or_default();
+
+        if unstaged.trim().is_empty() {
+            let status = Command::new("git")
+                .args(["status", "--porcelain"])
+                .current_dir(worktree_path)
+                .output()
+                .map(|o| String::from_utf8_lossy(&o.stdout).to_string())
+                .unwrap_or_default();
+            if status.trim().is_empty() {
+                anyhow::bail!("No changes to commit");
+            }
+            (status, "Changed files:\n".to_string())
+        } else {
+            (unstaged, "Unstaged changes:\n".to_string())
+        }
+    } else {
+        (diff, String::new())
+    };
+
+    let body = format!("{}{}", prefix, context);
+    let truncated = if body.len() > 4000 {
+        format!("{}...\n(truncated)", &body[..4000])
+    } else {
+        body
+    };
+
+    let prompt = format!(
+        "Write a concise git commit message (max 72 chars first line, then blank line then body if needed) for these changes. Output ONLY the commit message, nothing else.\n\nChanges:\n{}",
+        truncated
+    );
+
+    let mut cmd = Command::new(agent_cmd);
+    for arg in agent_args {
+        cmd.arg(arg);
+    }
+    cmd.arg(&prompt);
+
+    let output = cmd
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| anyhow::anyhow!("Failed to run {}: {}", agent_cmd, e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("{}", stderr.trim());
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 pub fn merge_to_main(

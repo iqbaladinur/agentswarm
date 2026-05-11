@@ -4,6 +4,7 @@ import type { Task, GraphLine } from '@shared/ipc-types'
 import { api } from '../../lib/api'
 import { useTaskStore } from '../../store/taskStore'
 import { parseGraph, maxGraphColumns } from '../../lib/graphParser'
+import { BranchSelect } from '../BranchSelect'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AlertDialog } from '../AlertDialog'
 
@@ -26,6 +27,7 @@ export const GitTab = memo(function GitTab({ task }: Props) {
   const [lines, setLines] = useState<GraphLine[]>([])
   const [branch, setBranch] = useState('')
   const [targetBranch, setTargetBranch] = useState('main')
+  const [branches, setBranches] = useState<string[]>([])
   const [selectedHash, setSelectedHash] = useState<string | null>(null)
   const [diff, setDiff] = useState<string>('')
   const [loading, setLoading] = useState(true)
@@ -51,14 +53,16 @@ export const GitTab = memo(function GitTab({ task }: Props) {
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [graph, currentBranch, defBranch] = await Promise.all([
+      const [graph, currentBranch, defBranch, branchList] = await Promise.all([
         api.git.graph(task.worktreePath),
         api.git.currentBranch(task.worktreePath),
         api.git.defaultBranch(task.repoPath),
+        api.git.listBranches(task.repoPath),
       ])
       setLines(graph)
       setBranch(currentBranch)
       setTargetBranch(defBranch)
+      setBranches(branchList)
     } catch (err) {
       console.error(err)
     } finally {
@@ -264,21 +268,29 @@ export const GitTab = memo(function GitTab({ task }: Props) {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="p-2.5 border-t border-border-soft flex-shrink-0 flex gap-2">
-            <button
-              onClick={loadAll}
-              className="flex-1 h-8 text-[12px] text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-lg transition-colors duration-100 font-medium"
-            >
-              Refresh
-            </button>
-            <button
-              onClick={() => setConfirmMerge(true)}
-              disabled={merging || lines.length === 0}
-              className="flex-1 h-8 text-[12px] bg-accent hover:bg-accent-dim text-white rounded-lg transition-colors duration-100 disabled:opacity-50 font-medium"
-            >
-              {merging ? 'Merging…' : `Merge to ${targetBranch}`}
-            </button>
+          {/* Merge controls */}
+          <div className="p-2.5 border-t border-border-soft flex-shrink-0 space-y-1.5">
+            <BranchSelect
+              branches={branches.filter((b) => b !== branch)}
+              value={targetBranch}
+              onChange={setTargetBranch}
+              position="above"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={loadAll}
+                className="flex-1 h-8 text-[12px] text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-lg transition-colors duration-100 font-medium"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={() => setConfirmMerge(true)}
+                disabled={merging || lines.length === 0}
+                className="flex-1 h-8 text-[12px] bg-accent hover:bg-accent-dim text-white rounded-lg transition-colors duration-100 disabled:opacity-50 font-medium"
+              >
+                {merging ? 'Merging…' : 'Merge'}
+              </button>
+            </div>
           </div>
         </div>
       </Panel>

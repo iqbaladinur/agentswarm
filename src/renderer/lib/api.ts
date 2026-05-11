@@ -13,8 +13,8 @@ export const api = {
   },
   task: {
     list: (repoPath: string) => invoke<Task[]>('list_tasks', { repoPath }),
-    create: (repoPath: string, name: string, baseBranch?: string) =>
-      invoke<Task>('create_task', { repoPath, name, baseBranch }),
+    create: (repoPath: string, name: string, branch?: string) =>
+      invoke<Task>('create_task', { repoPath, name, branch }),
     delete: (taskId: string) => invoke<void>('delete_task', { taskId }),
     updateStatus: (taskId: string, status: string) =>
       invoke<void>('update_task_status', { taskId, status }),
@@ -25,6 +25,10 @@ export const api = {
     diff: (worktreePath: string, commitHash: string) =>
       invoke<string>('git_diff', { worktreePath, commitHash }).then((diff) => ({ diff })),
     files: (worktreePath: string) => invoke<FileStatus[]>('git_files', { worktreePath }),
+    stage: (worktreePath: string, filePath: string) => invoke<void>('git_stage', { worktreePath, filePath }),
+    unstage: (worktreePath: string, filePath: string) => invoke<void>('git_unstage', { worktreePath, filePath }),
+    stageAll: (worktreePath: string) => invoke<void>('git_stage_all', { worktreePath }),
+    unstageAll: (worktreePath: string) => invoke<void>('git_unstage_all', { worktreePath }),
     fileDiff: (worktreePath: string, filePath: string) =>
       invoke<string>('git_file_diff', { worktreePath, filePath }),
     commit: (worktreePath: string, message: string) => invoke<void>('git_commit', { worktreePath, message }),
@@ -36,6 +40,8 @@ export const api = {
       invoke<void>('git_merge', { repoPath, worktreePath, branch, targetBranch }),
     deleteBranch: (repoPath: string, branch: string) =>
       invoke<void>('git_delete_branch', { repoPath, branch }),
+    generateCommitMessage: (worktreePath: string, agentCmd: string, agentArgs: string[]) =>
+      invoke<string>('generate_commit_message', { worktreePath, agentCmd, agentArgs }),
   },
   shell: {
     openVscode: (worktreePath: string) => invoke<void>('open_vscode', { worktreePath }),
