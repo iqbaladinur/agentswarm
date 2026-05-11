@@ -1,20 +1,27 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { WorkspaceArea } from './components/WorkspaceArea'
 import { useTaskStore } from './store/taskStore'
 import { useUIStore } from './store/uiStore'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { TitleBar } from './components/TitleBar'
+import { SettingsModal } from './components/SettingsModal'
 
 export default function App() {
   const repoPath = useTaskStore((s) => s.repoPath)
   const initialized = useTaskStore((s) => s.initialized)
   const init = useTaskStore((s) => s.init)
   const activeTaskId = useUIStore((s) => s.activeTaskId)
+  const theme = useUIStore((s) => s.theme)
+  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     init()
   }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   if (!initialized) {
     return (
@@ -26,7 +33,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-surface-0">
-      <TitleBar />
+      <TitleBar onOpenSettings={() => setShowSettings(true)} />
       <div className="flex flex-1 overflow-hidden">
         {repoPath ? (
           <>
@@ -39,6 +46,7 @@ export default function App() {
           <WelcomeScreen />
         )}
       </div>
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   )
 }

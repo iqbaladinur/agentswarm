@@ -1,6 +1,7 @@
 {
   "name": "agentswarm",
   "version": "0.1.0",
+  "type": "module",
   "description": "Claude Code session manager with workspace isolation",
   "scripts": {
     "dev": "tauri dev",

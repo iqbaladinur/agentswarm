@@ -16,7 +16,7 @@ export function AlertDialog({ title, message, onClose }: Props) {
         <div className="flex justify-end">
           <button
             onClick={onClose}
-            className="h-9 px-5 text-[13px] text-white bg-accent hover:bg-accent-dim rounded-lg transition-all duration-100 font-medium shadow-[0_4px_12px_rgba(139,124,247,0.2)]"
+            className="h-9 px-5 text-[13px] text-white bg-accent hover:bg-accent-dim rounded-lg transition-all duration-100 font-medium shadow-btn-accent"
           >
             OK
           </button>

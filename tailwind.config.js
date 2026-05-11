@@ -1,35 +1,35 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         surface: {
-          0: '#0a0a0b',
-          1: '#111114',
-          2: '#1a1a1f',
-          3: '#25252b',
-          4: '#2e2e36',
+          0: 'rgb(var(--color-surface-0) / <alpha-value>)',
+          1: 'rgb(var(--color-surface-1) / <alpha-value>)',
+          2: 'rgb(var(--color-surface-2) / <alpha-value>)',
+          3: 'rgb(var(--color-surface-3) / <alpha-value>)',
+          4: 'rgb(var(--color-surface-4) / <alpha-value>)',
         },
         border: {
-          DEFAULT: '#2a2a33',
-          soft: '#1f1f26',
-          accent: '#3d3780',
+          DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
+          soft: 'rgb(var(--color-border-soft) / <alpha-value>)',
+          accent: 'rgb(var(--color-border-accent) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#8b7cf7',
-          dim: '#7262e3',
-          bg: 'rgba(139,124,247,0.08)',
-          'bg-hover': 'rgba(139,124,247,0.14)',
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          dim: 'rgb(var(--color-accent-dim) / <alpha-value>)',
+          bg: 'rgb(var(--color-accent) / 0.08)',
+          'bg-hover': 'rgb(var(--color-accent) / 0.14)',
         },
-        success: '#4ade80',
-        warning: '#fbbf24',
-        error: '#f87171',
-        muted: '#727280',
-        'muted-dim': '#4e4e5a',
+        success: 'rgb(var(--color-success) / <alpha-value>)',
+        warning: 'rgb(var(--color-warning) / <alpha-value>)',
+        error: 'rgb(var(--color-error) / <alpha-value>)',
+        muted: 'rgb(var(--color-muted) / <alpha-value>)',
+        'muted-dim': 'rgb(var(--color-muted-dim) / <alpha-value>)',
         text: {
-          primary: '#e4e4ed',
-          secondary: '#9a9aab',
+          primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
+          secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
         },
       },
       fontFamily: {
@@ -39,13 +39,16 @@ module.exports = {
       boxShadow: {
         dropdown: '0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
         modal: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)',
-        glow: '0 0 12px rgba(139,124,247,0.25)',
+        glow: '0 0 12px rgb(var(--color-accent) / 0.25)',
+        'btn-accent': '0 4px 12px rgb(var(--color-accent) / 0.2)',
+        'btn-error': '0 4px 12px rgb(var(--color-error) / 0.2)',
+        'dot-success': '0 0 6px rgb(var(--color-success) / 0.4)',
       },
       ringWidth: {
         focus: '2px',
       },
       ringColor: {
-        focus: 'rgba(139,124,247,0.5)',
+        focus: 'rgb(var(--color-accent) / 0.5)',
       },
       animation: {
         'fade-in': 'fadeIn 0.15s ease-out',

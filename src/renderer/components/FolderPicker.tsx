@@ -113,7 +113,7 @@ export const FolderPicker = memo(function FolderPicker({ onSelect, onClose }: Pr
           <button
             onClick={() => data && onSelect(data.current)}
             disabled={!data}
-            className="h-9 px-5 text-[13px] bg-accent hover:bg-accent-dim text-white rounded-lg transition-all duration-100 disabled:opacity-50 font-medium shadow-[0_4px_12px_rgba(139,124,247,0.15)]"
+            className="h-9 px-5 text-[13px] bg-accent hover:bg-accent-dim text-white rounded-lg transition-all duration-100 disabled:opacity-50 font-medium shadow-btn-accent"
           >
             Select This Folder
           </button>

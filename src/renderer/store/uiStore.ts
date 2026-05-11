@@ -2,6 +2,14 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 type TabType = 'terminal' | 'git' | 'files'
+export type ThemeId = 'default' | 'high-contrast' | 'warm' | 'dracula'
+
+export const THEME_LABELS: Record<ThemeId, string> = {
+  'default': 'Default (Purple)',
+  'high-contrast': 'High Contrast',
+  'warm': 'Warm (Amber)',
+  'dracula': 'Dracula',
+}
 
 interface UIStore {
   // Ordered list of open task tabs
@@ -12,12 +20,15 @@ interface UIStore {
   activeTab: Record<string, TabType>
   // Default agent command for new task terminals
   agentCmd: string
+  // Active color theme
+  theme: ThemeId
 
   openTask: (taskId: string) => void
   closeTask: (taskId: string) => void
   setActiveTask: (taskId: string) => void
   setTab: (taskId: string, tab: TabType) => void
   setAgentCmd: (cmd: string) => void
+  setTheme: (theme: ThemeId) => void
   /** Register PTY cleanup callback — called when a task tab is closed */
   setPtyCleanup: (fn: ((taskId: string) => void) | null) => void
   _ptyCleanup: ((taskId: string) => void) | null
@@ -41,6 +52,7 @@ export const useUIStore = create<UIStore>()(
       activeTaskId: null,
       activeTab: {},
       agentCmd: 'claude',
+      theme: 'default',
       _ptyCleanup: null,
 
       openTask: (taskId) => {
@@ -76,6 +88,8 @@ export const useUIStore = create<UIStore>()(
 
       setAgentCmd: (cmd) => set({ agentCmd: cmd }),
 
+      setTheme: (theme) => set({ theme }),
+
       setPtyCleanup: (fn) => set({ _ptyCleanup: fn }),
     }),
     {
@@ -87,6 +101,7 @@ export const useUIStore = create<UIStore>()(
           activeTaskId: state.activeTaskId,
           activeTab: state.activeTab,
           agentCmd: state.agentCmd,
+          theme: state.theme,
         } as UIStore),
     },
   ),

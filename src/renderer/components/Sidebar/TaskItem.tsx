@@ -11,7 +11,7 @@ interface Props {
 
 const STATUS_STYLE: Record<Task['status'], { dot: string; pulse: boolean }> = {
   idle: { dot: 'bg-muted-dim', pulse: false },
-  running: { dot: 'bg-success shadow-[0_0_6px_rgba(74,222,128,0.4)]', pulse: true },
+  running: { dot: 'bg-success shadow-dot-success', pulse: true },
   done: { dot: 'bg-accent', pulse: false },
   failed: { dot: 'bg-error', pulse: false },
 }

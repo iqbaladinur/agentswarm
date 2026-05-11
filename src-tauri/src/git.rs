@@ -81,6 +81,7 @@ pub fn create_worktree(repo_path: &str, branch: &str, worktree_path: &str) -> an
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn remove_worktree(_repo_path: &str, worktree_path: &str) -> anyhow::Result<()> {
     let _ = std::fs::remove_dir_all(worktree_path);
     Ok(())

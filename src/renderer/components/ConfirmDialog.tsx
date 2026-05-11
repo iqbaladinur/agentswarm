@@ -28,8 +28,8 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Delete', cancelL
             onClick={onConfirm}
             className={`h-9 px-5 text-[13px] text-white rounded-lg transition-all duration-100 font-medium ${
               danger
-                ? 'bg-error hover:bg-red-500/90 shadow-[0_4px_12px_rgba(248,113,113,0.2)]'
-                : 'bg-accent hover:bg-accent-dim shadow-[0_4px_12px_rgba(139,124,247,0.2)]'
+                ? 'bg-error hover:bg-red-500/90 shadow-btn-error'
+                : 'bg-accent hover:bg-accent-dim shadow-btn-accent'
             }`}
           >
             {confirmLabel}

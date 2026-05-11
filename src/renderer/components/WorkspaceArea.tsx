@@ -93,7 +93,7 @@ export const WorkspaceArea = memo(function WorkspaceArea() {
               <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                 t
                   ? t.status === 'running'
-                    ? 'bg-success shadow-[0_0_6px_rgba(74,222,128,0.35)]'
+                    ? 'bg-success shadow-dot-success'
                     : t.status === 'failed'
                     ? 'bg-error'
                     : 'bg-muted-dim'

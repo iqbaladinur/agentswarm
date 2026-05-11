@@ -72,7 +72,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
           <button
             onClick={() => handleOpen(input)}
             disabled={loading || !input.trim()}
-            className="w-full h-11 bg-accent hover:bg-accent-dim text-white rounded-lg text-[14px] font-semibold transition-all duration-100 disabled:opacity-50 shadow-[0_4px_12px_rgba(139,124,247,0.2)]"
+            className="w-full h-11 bg-accent hover:bg-accent-dim text-white rounded-lg text-[14px] font-semibold transition-all duration-100 disabled:opacity-50 shadow-btn-accent"
           >
             {loading ? 'Opening…' : 'Open Repository'}
           </button>

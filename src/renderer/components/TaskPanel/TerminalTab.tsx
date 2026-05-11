@@ -147,7 +147,14 @@ export const TerminalTab = memo(function TerminalTab({ task, isActive }: Props) 
           ) : (
             <button
               ref={agentBtnRef}
-              onClick={() => setShowAgentMenu((v) => !v)}
+              onClick={() => {
+                if (!showAgentMenu && agentBtnRef.current) {
+                  const rect = agentBtnRef.current.getBoundingClientRect()
+                  const right = window.innerWidth - rect.right
+                  setMenuPos({ top: rect.bottom + 4, right })
+                }
+                setShowAgentMenu((v) => !v)
+              }}
               className="flex items-center gap-1 px-2.5 py-1 text-[12px] text-muted-dim hover:text-text-primary hover:bg-surface-2/50 transition-colors rounded h-full"
               title="Change agent"
             >
@@ -191,7 +198,7 @@ export const TerminalTab = memo(function TerminalTab({ task, isActive }: Props) 
             {term.error ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 p-6 text-center">
                 <div className="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-error" strokeWidth="2" strokeLinecap="round">
                     <circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/>
                   </svg>
                 </div>
