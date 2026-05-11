@@ -101,7 +101,7 @@ export function SettingsModal({ onClose }: Props) {
               onChange={(e) => setAgentInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') saveAgent() }}
               className="flex-1 bg-surface-1 text-text-primary text-[13px] px-3 py-2 rounded-lg border border-border focus:border-accent outline-none font-mono transition-colors"
-              placeholder="e.g. claude, github-copilot"
+              placeholder="e.g. claude, codex, gemini"
             />
             <button
               onClick={saveAgent}

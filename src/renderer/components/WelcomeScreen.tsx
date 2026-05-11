@@ -39,7 +39,7 @@ export const WelcomeScreen = memo(function WelcomeScreen() {
             </svg>
           </div>
           <h1 className="text-xl font-bold text-text-primary tracking-tight">AgentSwarm</h1>
-          <p className="text-text-secondary text-[13px]">Claude Code session manager</p>
+          <p className="text-text-secondary text-[13px]">Multi-agent coding session manager</p>
         </div>
 
         <div className="space-y-3">

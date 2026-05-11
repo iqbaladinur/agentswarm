@@ -1,14 +1,14 @@
 # AgentSwarm
 
-Claude Code session manager with workspace isolation. Desktop app built with Tauri 2.
+Multi-agent coding session manager with workspace isolation. Desktop app built with Tauri 2.
 
-Manage multiple Claude Code sessions across different git branches, each isolated in its own worktree with a dedicated terminal.
+Manage multiple AI agent sessions (Claude Code, GitHub Copilot, Codex, Gemini CLI, or any custom agent) across different git branches, each isolated in its own worktree with a dedicated terminal.
 
 ## Features
 
 - **Repository management** — Open, validate, and switch between multiple git repos. Persists recently opened repos with last-opened timestamps. Native OS folder picker or manual path input.
 - **Task isolation** — Each task automatically creates a dedicated git branch (`task/<slug>-<id>`) and worktree under `<repo>/.worktrees/<id>/`, keeping work completely separate. Tasks never interfere with each other or the main workspace.
-- **Embedded terminal** — ttyd-based terminal per task embedded via `<iframe>`. Auto-launches `claude` CLI in the correct worktree directory on open. Falls back to `$SHELL` when Claude exits. Up to 3 concurrent task panels with resizable split layout.
+- **Embedded terminal** — ttyd-based terminal per task embedded via `<iframe>`. Auto-launches your configured agent CLI in the correct worktree directory on open. Falls back to `$SHELL` when the agent exits. Up to 3 concurrent task panels with resizable split layout.
 - **Git integration** — Visual commit graph (`git log --graph --all -30`) with colored graph lines and ref labels. Side-by-side diff viewer with syntax-colored additions, deletions, and hunk headers. Changed files list parsed from `git status --porcelain` with color-coded status indicators (M/A/D/R/?). Stage-and-commit workflow with message input. One-click merge back to main branch.
 - **VS Code integration** — Open any task's worktree in VS Code as a new window with one click. Click individual changed files to open them directly.
 - **Session persistence** — Tasks, repos, and their metadata persist across app restarts via local SQLite database (WAL mode). No external database or cloud dependency.
@@ -74,7 +74,7 @@ The dev server starts Vite on `http://localhost:47821`, then opens a Tauri windo
 1. **Open a repo** — Type a path or browse folders on the welcome screen. The app validates it as a git repository before adding it.
 2. **Switch repos** — Click the repo header to open the dropdown and switch between tracked repos, or open another.
 3. **Create a task** — Click "+ New Task" in the sidebar, enter a name. A git branch and worktree are created automatically.
-4. **Work in the terminal** — Click a task to open its panel with an embedded terminal (ttyd) that auto-runs `claude` in the worktree directory.
+4. **Work in the terminal** — Click a task to open its panel with an embedded terminal (ttyd) that auto-runs your configured agent in the worktree directory.
 5. **Track changes** — Use the Files tab to see changed files with color-coded status. Type a commit message and commit directly. Use the Git tab to view the commit graph (30 most recent across all branches) and click any commit to see its diff.
 6. **Merge** — When done, click "Merge to main" in the Git tab. The app checks out main, merges the task branch, and returns to the task branch.
 7. **Open in VS Code** — Click the VS Code button in any task panel header to open the worktree in a new VS Code window.
@@ -95,7 +95,7 @@ The worktree is a separate working directory with its own branch. If the reposit
 When a task opens:
 1. Rust finds a free TCP port (binds to `127.0.0.1:0` for an ephemeral port)
 2. Resolves the `ttyd` binary (checks PATH, `/usr/local/bin/ttyd`, `/usr/bin/ttyd`, `~/.local/bin/ttyd`)
-3. Spawns `ttyd --interface 127.0.0.1 --port <port> --writable sh -c 'claude; exec $SHELL'` in the worktree directory
+3. Spawns `ttyd --interface 127.0.0.1 --port <port> --writable sh -c '<agent>; exec $SHELL'` in the worktree directory
 4. Waits up to 5 seconds for the port to accept TCP connections (polling every 80ms)
 5. Frontend embeds an `<iframe>` pointed at `http://127.0.0.1:<port>`
 6. On task close, the ttyd child process is killed and task status resets to 'idle'
