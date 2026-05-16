@@ -5,6 +5,7 @@
   "description": "Multi-agent coding session manager with workspace isolation",
   "scripts": {
     "dev": "tauri dev",
+    "dev:clean": "bash scripts/dev-clean.sh",
     "build": "tauri build",
     "client:dev": "vite",
     "client:build": "vite build"
