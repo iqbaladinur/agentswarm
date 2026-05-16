@@ -390,10 +390,16 @@ pub fn list_branches(repo_path: &str) -> Vec<String> {
         .unwrap_or_else(|_| std::process::Output { status: Default::default(), stdout: vec![], stderr: vec![] });
 
     let text = String::from_utf8_lossy(&out.stdout);
-    text.lines()
+    let branches: Vec<String> = text.lines()
         .map(|l| l.trim().to_string())
         .filter(|b| !b.is_empty() && !b.starts_with("origin/"))
-        .collect()
+        .collect();
+
+    if branches.is_empty() {
+        vec![detect_default_branch(repo_path)]
+    } else {
+        branches
+    }
 }
 
 pub fn generate_commit_message(worktree_path: &str, agent_cmd: &str, agent_args: &[String]) -> anyhow::Result<String> {

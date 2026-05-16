@@ -1,4 +1,4 @@
-import { useRef, useEffect, startTransition, useCallback, memo, useState } from 'react'
+import { useRef, useEffect, startTransition, useCallback, memo, useMemo, useState } from 'react'
 import { useUIStore } from '../store/uiStore'
 import { useTaskStore } from '../store/taskStore'
 import { usePtyStore } from '../store/ptyStore'
@@ -14,6 +14,7 @@ export const WorkspaceArea = memo(function WorkspaceArea() {
   const setPtyCleanup = useUIStore((s) => s.setPtyCleanup)
 
   const tasks = useTaskStore((s) => s.tasks)
+  const repos = useTaskStore((s) => s.repos)
   const taskCache = useTaskStore((s) => s.taskCache)
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const killAll = usePtyStore((s) => s.killAll)
@@ -43,6 +44,17 @@ export const WorkspaceArea = memo(function WorkspaceArea() {
   const findTask = useCallback(
     (id: string) => tasks.find((t) => t.id === id) ?? taskCache[id],
     [tasks, taskCache],
+  )
+
+  const repoNames = useMemo(() => new Map(repos.map((repo) => [repo.path, repo.name])), [repos])
+
+  const getRepoName = useCallback(
+    (repoPath: string) => {
+      const knownName = repoNames.get(repoPath)
+      if (knownName) return knownName
+      return repoPath.split(/[\\/]/).filter(Boolean).pop() ?? repoPath
+    },
+    [repoNames],
   )
 
   const handleSelectTask = useCallback(
@@ -100,7 +112,17 @@ export const WorkspaceArea = memo(function WorkspaceArea() {
                   : 'bg-muted-dim'
               }`} />
               {/* Name */}
-              <span className="truncate max-w-[140px] font-medium">{t?.name ?? id}</span>
+              <span className="flex items-center min-w-0 max-w-[220px] font-medium">
+                {t ? (
+                  <>
+                    <span className="truncate text-muted-dim max-w-[82px]">{getRepoName(t.repoPath)}</span>
+                    <span className="px-1.5 text-muted-dim/70 flex-shrink-0">/</span>
+                    <span className="truncate text-inherit max-w-[120px]">{t.name}</span>
+                  </>
+                ) : (
+                  <span className="truncate max-w-[140px]">{id}</span>
+                )}
+              </span>
               {/* Close */}
               <button
                 onClick={(e) => handleCloseTask(id, e)}
